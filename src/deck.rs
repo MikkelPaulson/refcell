@@ -1,3 +1,47 @@
+use rand::seq::SliceRandom;
+use rand::thread_rng;
+use std::convert::TryInto;
+
+#[derive(Debug)]
+struct Deck([Card; 52]);
+
+impl Deck {
+    pub fn new(cards: [Card; 52]) -> Deck {
+        Deck(cards)
+    }
+
+    pub fn shuffle() -> Deck {
+        let mut rng = thread_rng();
+        let mut cards = Vec::<Card>::with_capacity(52);
+
+        for suit in [Suit::Clubs, Suit::Diamonds, Suit::Hearts, Suit::Spades].iter() {
+            for rank in 1..=13 {
+                cards.push(Card::new(rank, *suit).unwrap());
+            }
+        }
+
+        cards.shuffle(&mut rng);
+        Deck::new(cards.try_into().unwrap())
+    }
+}
+
+#[cfg(test)]
+mod test_deck {
+    use super::Deck;
+
+    #[test]
+    fn new() {
+        let deck = Deck::shuffle();
+        assert_eq!(format!("{:?}", deck), format!("{:?}", deck));
+
+        // Statistically, the chances of this failing are 1:(52!)
+        assert_ne!(
+            format!("{:?}", Deck::shuffle()),
+            format!("{:?}", Deck::shuffle()),
+        );
+    }
+}
+
 #[derive(Debug, PartialEq)]
 struct Card(u8, Suit);
 
@@ -26,7 +70,7 @@ mod test_card {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum Suit {
     Clubs,
     Diamonds,
