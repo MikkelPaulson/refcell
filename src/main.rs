@@ -2,6 +2,9 @@ use druid::widget::{Container, Flex, Label};
 use druid::{AppLauncher, Color, Widget, WidgetExt, WindowDesc};
 
 mod deck;
+mod layout;
+
+use deck::{Card, Deck, Suit};
 
 fn main() {
     let main_window = WindowDesc::new(ui_builder);
