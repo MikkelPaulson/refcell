@@ -1,57 +1,96 @@
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use std::convert::TryInto;
+use std::iter;
 
 #[derive(Debug)]
-struct Deck([Card; 52]);
+pub struct Deck(Vec<Card>);
 
 impl Deck {
-    pub fn new(cards: [Card; 52]) -> Deck {
-        Deck(cards)
+    pub fn new(cards: Vec<Card>) -> Self {
+        Self(cards)
     }
 
-    pub fn shuffle() -> Deck {
+    pub fn fresh() -> Self {
+        Self(
+            iter::empty::<Card>()
+                .chain((0..13).map(|i| Card::new(i + 1, Suit::Spades).unwrap()))
+                .chain((0..13).map(|i| Card::new(i + 1, Suit::Diamonds).unwrap()))
+                .chain((0..13).map(|i| Card::new(13 - i, Suit::Clubs).unwrap()))
+                .chain((0..13).map(|i| Card::new(13 - i, Suit::Hearts).unwrap()))
+                .collect(),
+        )
+    }
+
+    pub fn shuffled() -> Self {
+        let mut deck = Self::fresh();
+        deck.shuffle();
+        deck
+    }
+
+    pub fn shuffle(&mut self) {
         let mut rng = thread_rng();
-        let mut cards = Vec::<Card>::with_capacity(52);
+        self.0.shuffle(&mut rng);
+    }
 
-        for suit in [Suit::Clubs, Suit::Diamonds, Suit::Hearts, Suit::Spades].iter() {
-            for rank in 1..=13 {
-                cards.push(Card::new(rank, *suit).unwrap());
-            }
-        }
-
-        cards.shuffle(&mut rng);
-        Deck::new(cards.try_into().unwrap())
+    pub fn pop(&mut self) -> Option<Card> {
+        self.0.pop()
     }
 }
 
 #[cfg(test)]
 mod test_deck {
-    use super::Deck;
+    use super::{Card, Deck, Suit};
 
     #[test]
-    fn new() {
-        let deck = Deck::shuffle();
+    fn fresh_pop() {
+        let mut deck = Deck::fresh();
+
+        for i in 1..=13 {
+            assert_eq!(Some(Card(i, Suit::Hearts)), deck.pop());
+        }
+        for i in 1..=13 {
+            assert_eq!(Some(Card(i, Suit::Clubs)), deck.pop());
+        }
+        for i in (1..=13).rev() {
+            assert_eq!(Some(Card(i, Suit::Diamonds)), deck.pop());
+        }
+        for i in (1..=13).rev() {
+            assert_eq!(Some(Card(i, Suit::Spades)), deck.pop());
+        }
+        assert_eq!(None, deck.pop());
+    }
+
+    #[test]
+    fn shuffled() {
+        let deck = Deck::shuffled();
         assert_eq!(format!("{:?}", deck), format!("{:?}", deck));
 
         // Statistically, the chances of this failing are 1:(52!)
         assert_ne!(
-            format!("{:?}", Deck::shuffle()),
-            format!("{:?}", Deck::shuffle()),
+            format!("{:?}", Deck::shuffled()),
+            format!("{:?}", Deck::shuffled()),
         );
     }
 }
 
 #[derive(Debug, PartialEq)]
-struct Card(u8, Suit);
+pub struct Card(u8, Suit);
 
 impl Card {
-    pub fn new(rank: u8, suit: Suit) -> Result<Card, &'static str> {
+    pub fn new(rank: u8, suit: Suit) -> Result<Self, &'static str> {
         if rank >= 1 && rank <= 13 {
-            Ok(Card(rank, suit))
+            Ok(Self(rank, suit))
         } else {
             Err("Invalid rank")
         }
+    }
+
+    pub fn get_rank(&self) -> u8 {
+        self.0
+    }
+
+    pub fn get_suit(&self) -> Suit {
+        self.1
     }
 }
 
@@ -71,7 +110,7 @@ mod test_card {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-enum Suit {
+pub enum Suit {
     Clubs,
     Diamonds,
     Hearts,
@@ -81,8 +120,8 @@ enum Suit {
 impl Suit {
     pub fn is_red(&self) -> bool {
         match self {
-            Suit::Diamonds | Suit::Hearts => true,
-            Suit::Clubs | Suit::Spades => false,
+            Self::Diamonds | Self::Hearts => true,
+            Self::Clubs | Self::Spades => false,
         }
     }
 }
