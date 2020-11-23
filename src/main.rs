@@ -1,6 +1,8 @@
 use druid::widget::{Container, Flex, Label};
 use druid::{AppLauncher, Color, Widget, WidgetExt, WindowDesc};
 
+mod deck;
+
 fn main() {
     let main_window = WindowDesc::new(ui_builder);
     AppLauncher::with_window(main_window)
