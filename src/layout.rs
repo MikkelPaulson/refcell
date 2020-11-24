@@ -51,20 +51,15 @@ mod test_tableau {
 
     #[test]
     fn deal() {
-        let tableau = Tableau::deal(Deck::shuffled());
+        let tableau = Tableau::deal(Deck::fresh());
         tableau
             .cells
             .iter()
             .for_each(|cell| assert_eq!(&Cell(None), cell));
-        tableau.foundations.iter().for_each(|foundation| {
-            assert_eq!(
-                &Foundation {
-                    suit: None,
-                    cards: Vec::new()
-                },
-                foundation
-            )
-        });
+        tableau
+            .foundations
+            .iter()
+            .for_each(|foundation| assert_eq!(&Foundation(Vec::new()), foundation));
         tableau.cascades[0..4]
             .iter()
             .for_each(|cascade| assert_eq!(7, cascade.len()));
@@ -138,6 +133,10 @@ impl Cell {
         self.0.is_none()
     }
 
+    pub fn peek(&self) -> Option<&Card> {
+        self.0.as_ref()
+    }
+
     pub fn push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
         if self.is_empty() {
             self.0 = Some(card);
@@ -169,11 +168,13 @@ mod test_cell {
     #[test]
     fn is_empty() {
         assert!(Cell(None).is_empty());
+        assert_eq!(false, Cell(some_card()).is_empty());
     }
 
     #[test]
-    fn is_not_empty() {
-        assert_eq!(false, Cell(some_card()).is_empty());
+    fn peek() {
+        assert_eq!(None, Cell(None).peek());
+        assert_eq!(Some(&card()), Cell(some_card()).peek());
     }
 
     #[test]
@@ -216,40 +217,37 @@ mod test_cell {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Foundation {
-    suit: Option<Suit>,
-    cards: Vec<Card>,
-}
+pub struct Foundation(Vec<Card>);
 
 impl Foundation {
     pub fn empty() -> Self {
-        Self {
-            suit: None,
-            cards: Vec::new(),
-        }
+        Self(Vec::new())
     }
 
     pub fn get_suit(&self) -> Option<Suit> {
-        self.suit
+        self.peek().map(|card| card.get_suit())
     }
 
     pub fn get_rank(&self) -> u8 {
-        self.cards.len().try_into().unwrap()
+        self.peek().map(|card| card.get_rank()).unwrap_or(0)
+    }
+
+    pub fn peek(&self) -> Option<&Card> {
+        self.0.last()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.cards.is_empty()
+        self.0.is_empty()
     }
 
     pub fn is_legal(&self, card: &Card) -> bool {
-        (self.suit == None || self.suit == Some(card.get_suit()))
+        (self.get_suit() == None || self.get_suit() == Some(card.get_suit()))
             && self.get_rank() + 1 == card.get_rank()
     }
 
     pub fn push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
         if self.is_legal(&card) {
-            self.suit = Some(card.get_suit());
-            self.cards.push(card);
+            self.0.push(card);
             Ok(())
         } else {
             Err((card, "That card is not valid on this foundation."))
@@ -263,33 +261,48 @@ mod test_foundation {
 
     #[test]
     fn empty() {
-        assert_eq!(
-            Foundation {
-                suit: None,
-                cards: Vec::new(),
-            },
-            Foundation::empty(),
-        );
+        assert_eq!(Foundation(Vec::new()), Foundation::empty());
     }
 
     #[test]
     fn get_suit() {
         assert_eq!(
             Some(Suit::Spades),
-            Foundation {
-                suit: Some(Suit::Spades),
-                cards: Vec::new()
-            }
-            .get_suit(),
+            Foundation(vec![Card::new(1, Suit::Spades)]).get_suit(),
         );
 
+        assert_eq!(None, Foundation(Vec::new()).get_suit());
+    }
+
+    #[test]
+    fn get_rank() {
+        assert_eq!(0, Foundation(Vec::new()).get_rank());
         assert_eq!(
-            None,
-            Foundation {
-                suit: None,
-                cards: Vec::new()
-            }
-            .get_suit(),
+            2,
+            Foundation(vec![Card::new(1, Suit::Clubs), Card::new(2, Suit::Clubs)]).get_rank(),
+        );
+    }
+
+    #[test]
+    fn peek_empty() {
+        let foundation = Foundation(Vec::new());
+        assert_eq!(None, foundation.peek());
+    }
+
+    #[test]
+    fn peek_nonempty() {
+        let foundation = Foundation(vec![Card::new(1, Suit::Clubs), Card::new(2, Suit::Clubs)]);
+        assert_eq!(Some(&Card::new(2, Suit::Clubs)), foundation.peek());
+        assert_eq!(Some(&Card::new(2, Suit::Clubs)), foundation.peek());
+    }
+
+    #[test]
+    fn is_empty() {
+        assert!(Foundation(Vec::new()).is_empty());
+
+        assert_eq!(
+            false,
+            Foundation(vec![Card::new(1, Suit::Clubs)]).is_empty(),
         );
     }
 
@@ -301,18 +314,12 @@ mod test_foundation {
         assert!(foundation.is_legal(&card));
         assert_eq!(Ok(()), foundation.push(card));
 
-        assert_eq!(
-            Foundation {
-                suit: Some(Suit::Spades),
-                cards: vec![Card::new(1, Suit::Spades)]
-            },
-            foundation,
-        );
+        assert_eq!(Foundation(vec![Card::new(1, Suit::Spades)]), foundation);
     }
 
     #[test]
     fn push_empty_illegal_rank() {
-        let mut foundation = Foundation::empty();
+        let mut foundation = Foundation(Vec::new());
         let card = Card::new(2, Suit::Spades);
 
         assert_eq!(false, foundation.is_legal(&card));
@@ -324,39 +331,30 @@ mod test_foundation {
             foundation.push(card),
         );
 
-        assert_eq!(Foundation::empty(), foundation);
+        assert_eq!(Foundation(Vec::new()), foundation);
     }
 
     #[test]
     fn push_nonempty_legal() {
-        let mut foundation = Foundation {
-            suit: Some(Suit::Clubs),
-            cards: vec![Card::new(1, Suit::Clubs), Card::new(2, Suit::Clubs)],
-        };
+        let mut foundation = Foundation(vec![Card::new(1, Suit::Clubs), Card::new(2, Suit::Clubs)]);
         let card = Card::new(3, Suit::Clubs);
 
         assert!(foundation.is_legal(&card));
         assert_eq!(Ok(()), foundation.push(card));
 
         assert_eq!(
-            Foundation {
-                suit: Some(Suit::Clubs),
-                cards: vec![
-                    Card::new(1, Suit::Clubs),
-                    Card::new(2, Suit::Clubs),
-                    Card::new(3, Suit::Clubs),
-                ],
-            },
+            Foundation(vec![
+                Card::new(1, Suit::Clubs),
+                Card::new(2, Suit::Clubs),
+                Card::new(3, Suit::Clubs),
+            ]),
             foundation,
         );
     }
 
     #[test]
     fn push_nonempty_illegal_rank() {
-        let mut foundation = Foundation {
-            suit: Some(Suit::Clubs),
-            cards: vec![Card::new(1, Suit::Clubs)],
-        };
+        let mut foundation = Foundation(vec![Card::new(1, Suit::Clubs)]);
         let card = Card::new(3, Suit::Clubs);
 
         assert_eq!(false, foundation.is_legal(&card));
@@ -368,21 +366,12 @@ mod test_foundation {
             foundation.push(card),
         );
 
-        assert_eq!(
-            Foundation {
-                suit: Some(Suit::Clubs),
-                cards: vec![Card::new(1, Suit::Clubs)],
-            },
-            foundation,
-        );
+        assert_eq!(Foundation(vec![Card::new(1, Suit::Clubs)]), foundation);
     }
 
     #[test]
     fn push_nonempty_illegal_suit() {
-        let mut foundation = Foundation {
-            suit: Some(Suit::Clubs),
-            cards: vec![Card::new(1, Suit::Clubs)],
-        };
+        let mut foundation = Foundation(vec![Card::new(1, Suit::Clubs)]);
         let card = Card::new(2, Suit::Hearts);
 
         assert_eq!(false, foundation.is_legal(&card));
@@ -394,31 +383,7 @@ mod test_foundation {
             foundation.push(card),
         );
 
-        assert_eq!(
-            Foundation {
-                suit: Some(Suit::Clubs),
-                cards: vec![Card::new(1, Suit::Clubs)],
-            },
-            foundation,
-        );
-    }
-
-    #[test]
-    fn is_empty() {
-        assert!(Foundation {
-            suit: None,
-            cards: Vec::new()
-        }
-        .is_empty());
-
-        assert_eq!(
-            false,
-            Foundation {
-                suit: Some(Suit::Clubs),
-                cards: vec![Card::new(1, Suit::Clubs)]
-            }
-            .is_empty(),
-        );
+        assert_eq!(Foundation(vec![Card::new(1, Suit::Clubs)]), foundation);
     }
 }
 
@@ -477,6 +442,14 @@ impl Cascade {
             })
             .is_ok()
     }
+
+    pub fn cards(&self) -> &Vec<Card> {
+        &self.0
+    }
+
+    pub fn take(&mut self, count: usize) -> Vec<Card> {
+        self.0.split_off(self.0.len() - count)
+    }
 }
 
 #[cfg(test)]
@@ -498,7 +471,7 @@ mod test_cascade {
 
     #[test]
     fn pop() {
-        let mut cascade = Cascade::new(vec![
+        let mut cascade = Cascade(vec![
             Card::new(1, Suit::Hearts),
             Card::new(6, Suit::Diamonds),
         ]);
@@ -510,25 +483,25 @@ mod test_cascade {
 
     #[test]
     fn push_empty() {
-        let mut cascade = Cascade::new(Vec::new());
+        let mut cascade = Cascade(Vec::new());
         let card = Card::new(1, Suit::Hearts);
 
         assert!(cascade.is_legal(&card));
         assert_eq!(Ok(()), cascade.push(card));
 
-        assert_eq!(Cascade::new(vec![Card::new(1, Suit::Hearts)]), cascade,);
+        assert_eq!(Cascade(vec![Card::new(1, Suit::Hearts)]), cascade,);
     }
 
     #[test]
     fn push_legal() {
-        let mut cascade = Cascade::new(vec![Card::new(13, Suit::Clubs)]);
+        let mut cascade = Cascade(vec![Card::new(13, Suit::Clubs)]);
         let card = Card::new(12, Suit::Hearts);
 
         assert!(cascade.is_legal(&card));
         assert_eq!(Ok(()), cascade.push(card));
 
         assert_eq!(
-            Cascade::new(vec![
+            Cascade(vec![
                 Card::new(13, Suit::Clubs),
                 Card::new(12, Suit::Hearts),
             ]),
@@ -538,7 +511,7 @@ mod test_cascade {
 
     #[test]
     fn push_illegal_color() {
-        let mut cascade = Cascade::new(vec![Card::new(13, Suit::Clubs)]);
+        let mut cascade = Cascade(vec![Card::new(13, Suit::Clubs)]);
         let card = Card::new(12, Suit::Spades);
 
         assert_eq!(false, cascade.is_legal(&card));
@@ -550,12 +523,12 @@ mod test_cascade {
             cascade.push(card),
         );
 
-        assert_eq!(Cascade::new(vec![Card::new(13, Suit::Clubs)]), cascade,);
+        assert_eq!(Cascade(vec![Card::new(13, Suit::Clubs)]), cascade,);
     }
 
     #[test]
     fn push_illegal_rank() {
-        let mut cascade = Cascade::new(vec![Card::new(13, Suit::Clubs)]);
+        let mut cascade = Cascade(vec![Card::new(13, Suit::Clubs)]);
         let card = Card::new(11, Suit::Hearts);
 
         assert_eq!(false, cascade.is_legal(&card));
@@ -567,18 +540,18 @@ mod test_cascade {
             cascade.push(card),
         );
 
-        assert_eq!(Cascade::new(vec![Card::new(13, Suit::Clubs)]), cascade,);
+        assert_eq!(Cascade(vec![Card::new(13, Suit::Clubs)]), cascade,);
     }
 
     #[test]
     fn push_unchecked() {
-        let mut cascade = Cascade::new(vec![Card::new(13, Suit::Clubs)]);
+        let mut cascade = Cascade(vec![Card::new(13, Suit::Clubs)]);
         let card = Card::new(11, Suit::Hearts);
 
         cascade.push_unchecked(card);
 
         assert_eq!(
-            Cascade::new(vec![
+            Cascade(vec![
                 Card::new(13, Suit::Clubs),
                 Card::new(11, Suit::Hearts),
             ]),
@@ -587,8 +560,21 @@ mod test_cascade {
     }
 
     #[test]
+    fn len() {
+        assert_eq!(0, Cascade(Vec::new()).len());
+        assert_eq!(
+            2,
+            Cascade(vec![
+                Card::new(13, Suit::Clubs),
+                Card::new(12, Suit::Hearts)
+            ])
+            .len(),
+        );
+    }
+
+    #[test]
     fn is_sequential() {
-        let cascade = Cascade::new(vec![
+        let cascade = Cascade(vec![
             Card::new(13, Suit::Clubs),
             Card::new(10, Suit::Hearts),
             Card::new(9, Suit::Diamonds),
@@ -596,19 +582,54 @@ mod test_cascade {
         ]);
         assert!(cascade.is_sequential());
 
-        let cascade = Cascade::new(vec![
+        let cascade = Cascade(vec![
             Card::new(10, Suit::Diamonds),
             Card::new(10, Suit::Hearts),
         ]);
         assert!(cascade.is_sequential());
 
-        let cascade = Cascade::empty();
+        let cascade = Cascade(Vec::new());
         assert!(cascade.is_sequential());
 
-        let cascade = Cascade::new(vec![
+        let cascade = Cascade(vec![
             Card::new(1, Suit::Diamonds),
             Card::new(2, Suit::Hearts),
         ]);
         assert_eq!(false, cascade.is_sequential());
+    }
+
+    #[test]
+    fn cards() {
+        assert_eq!(
+            &vec![Card::new(13, Suit::Clubs)],
+            Cascade(vec![Card::new(13, Suit::Clubs)]).cards(),
+        );
+    }
+
+    #[test]
+    fn take() {
+        let mut cascade = Cascade(vec![
+            Card::new(4, Suit::Clubs),
+            Card::new(3, Suit::Spades),
+            Card::new(2, Suit::Hearts),
+            Card::new(1, Suit::Diamonds),
+        ]);
+
+        assert_eq!(
+            vec![Card::new(2, Suit::Hearts), Card::new(1, Suit::Diamonds)],
+            cascade.take(2),
+        );
+
+        assert_eq!(
+            Cascade(vec![Card::new(4, Suit::Clubs), Card::new(3, Suit::Spades)]),
+            cascade,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn take_invalid() {
+        let mut cascade = Cascade(vec![Card::new(1, Suit::Hearts)]);
+        cascade.take(2);
     }
 }
