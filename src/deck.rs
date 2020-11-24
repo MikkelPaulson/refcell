@@ -10,13 +10,14 @@ impl Deck {
         Self(cards)
     }
 
+    /// For funsies, define a "fresh" deck according to the sequence used by Bicycle.
     pub fn fresh() -> Self {
         Self(
             iter::empty::<Card>()
-                .chain((0..13).map(|i| Card::new(i + 1, Suit::Spades).unwrap()))
-                .chain((0..13).map(|i| Card::new(i + 1, Suit::Diamonds).unwrap()))
-                .chain((0..13).map(|i| Card::new(13 - i, Suit::Clubs).unwrap()))
-                .chain((0..13).map(|i| Card::new(13 - i, Suit::Hearts).unwrap()))
+                .chain((0..13).map(|i| Card::new(i + 1, Suit::Spades)))
+                .chain((0..13).map(|i| Card::new(i + 1, Suit::Diamonds)))
+                .chain((0..13).map(|i| Card::new(13 - i, Suit::Clubs)))
+                .chain((0..13).map(|i| Card::new(13 - i, Suit::Hearts)))
                 .collect(),
         )
     }
@@ -77,11 +78,11 @@ mod test_deck {
 pub struct Card(u8, Suit);
 
 impl Card {
-    pub fn new(rank: u8, suit: Suit) -> Result<Self, &'static str> {
+    pub fn new(rank: u8, suit: Suit) -> Self {
         if rank >= 1 && rank <= 13 {
-            Ok(Self(rank, suit))
+            Self(rank, suit)
         } else {
-            Err("Invalid rank")
+            panic!("Invalid rank.")
         }
     }
 
@@ -99,13 +100,23 @@ mod test_card {
     use super::{Card, Suit};
 
     #[test]
-    fn new() {
-        assert_eq!(Err("Invalid rank"), Card::new(0, Suit::Hearts));
-        assert_eq!(Ok(Card(1, Suit::Spades)), Card::new(1, Suit::Spades));
-        assert_eq!(Ok(Card(2, Suit::Hearts)), Card::new(2, Suit::Hearts));
-        assert_eq!(Ok(Card(12, Suit::Diamonds)), Card::new(12, Suit::Diamonds));
-        assert_eq!(Ok(Card(13, Suit::Clubs)), Card::new(13, Suit::Clubs));
-        assert_eq!(Err("Invalid rank"), Card::new(14, Suit::Clubs));
+    fn new_valid() {
+        assert_eq!(Card(1, Suit::Spades), Card::new(1, Suit::Spades));
+        assert_eq!(Card(2, Suit::Hearts), Card::new(2, Suit::Hearts));
+        assert_eq!(Card(12, Suit::Diamonds), Card::new(12, Suit::Diamonds));
+        assert_eq!(Card(13, Suit::Clubs), Card::new(13, Suit::Clubs));
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid rank.")]
+    fn new_too_small() {
+        Card::new(0, Suit::Spades);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid rank.")]
+    fn new_too_big() {
+        Card::new(14, Suit::Clubs);
     }
 }
 
