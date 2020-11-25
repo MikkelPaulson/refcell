@@ -1,4 +1,5 @@
-use super::{Card, Deck, Suit};
+use super::deck::{Card, Deck, Suit};
+use druid::Data;
 use std::convert::TryInto;
 use std::iter;
 
@@ -10,7 +11,7 @@ mod cascade;
 mod cell;
 mod foundation;
 
-#[derive(Debug)]
+#[derive(Clone, Data, Debug)]
 pub struct Tableau {
     pub cells: [Cell; 4],
     pub foundations: [Foundation; 4],

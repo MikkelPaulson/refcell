@@ -1,18 +1,20 @@
+use druid::Data;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::iter;
+use std::rc::Rc;
 
 #[derive(Debug)]
-pub struct Deck(Vec<Card>);
+pub struct Deck(Rc<Vec<Card>>);
 
 impl Deck {
     pub fn new(cards: Vec<Card>) -> Self {
-        Self(cards)
+        Self(Rc::new(cards))
     }
 
     /// For funsies, define a "fresh" deck according to the sequence used by Bicycle.
     pub fn fresh() -> Self {
-        Self(
+        Self::new(
             iter::empty::<Card>()
                 .chain((0..13).map(|i| Card::new(i + 1, Suit::Spades)))
                 .chain((0..13).map(|i| Card::new(i + 1, Suit::Diamonds)))
@@ -30,11 +32,11 @@ impl Deck {
 
     pub fn shuffle(&mut self) {
         let mut rng = thread_rng();
-        self.0.shuffle(&mut rng);
+        Rc::get_mut(&mut self.0).unwrap().shuffle(&mut rng);
     }
 
     pub fn pop(&mut self) -> Option<Card> {
-        self.0.pop()
+        Rc::get_mut(&mut self.0).unwrap().pop()
     }
 }
 
@@ -74,7 +76,7 @@ mod test_deck {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Data, Debug, PartialEq)]
 pub struct Card(u8, Suit);
 
 impl Card {
@@ -120,7 +122,7 @@ mod test_card {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Data, Debug, PartialEq)]
 pub enum Suit {
     Clubs,
     Diamonds,

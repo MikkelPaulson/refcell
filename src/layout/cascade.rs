@@ -1,19 +1,21 @@
 use super::Card;
+use druid::Data;
+use std::rc::Rc;
 
-#[derive(Debug, PartialEq)]
-pub struct Cascade(Vec<Card>);
+#[derive(Clone, Data, Debug, PartialEq)]
+pub struct Cascade(Rc<Vec<Card>>);
 
 impl Cascade {
     pub fn new(cards: Vec<Card>) -> Self {
-        Self(cards)
+        Self(Rc::new(cards))
     }
 
     pub fn empty() -> Self {
-        Self(Vec::new())
+        Self::new(Vec::new())
     }
 
     pub fn pop(&mut self) -> Option<Card> {
-        self.0.pop()
+        Rc::get_mut(&mut self.0).unwrap().pop()
     }
 
     pub fn is_legal(&self, card: &Card) -> bool {
@@ -36,7 +38,7 @@ impl Cascade {
     }
 
     pub fn push_unchecked(&mut self, card: Card) {
-        self.0.push(card)
+        Rc::get_mut(&mut self.0).unwrap().push(card)
     }
 
     pub fn len(&self) -> usize {
@@ -61,7 +63,9 @@ impl Cascade {
     }
 
     pub fn take(&mut self, count: usize) -> Vec<Card> {
-        self.0.split_off(self.0.len() - count)
+        Rc::get_mut(&mut self.0)
+            .map(|cards| cards.split_off(cards.len() - count))
+            .unwrap()
     }
 }
 
@@ -69,23 +73,24 @@ impl Cascade {
 mod tests {
     use super::super::Suit;
     use super::{Card, Cascade};
+    use std::rc::Rc;
 
     #[test]
     fn new() {
         assert_eq!(
-            Cascade(vec![Card::new(1, Suit::Hearts)]),
+            Cascade(Rc::new(vec![Card::new(1, Suit::Hearts)])),
             Cascade::new(vec![Card::new(1, Suit::Hearts)]),
         );
     }
 
     #[test]
     fn empty() {
-        assert_eq!(Cascade(Vec::new()), Cascade::empty());
+        assert_eq!(Cascade(Rc::new(Vec::new())), Cascade::empty());
     }
 
     #[test]
     fn pop() {
-        let mut cascade = Cascade(vec![
+        let mut cascade = Cascade::new(vec![
             Card::new(1, Suit::Hearts),
             Card::new(6, Suit::Diamonds),
         ]);
@@ -97,25 +102,25 @@ mod tests {
 
     #[test]
     fn push_empty() {
-        let mut cascade = Cascade(Vec::new());
+        let mut cascade = Cascade::empty();
         let card = Card::new(1, Suit::Hearts);
 
         assert!(cascade.is_legal(&card));
         assert_eq!(Ok(()), cascade.push(card));
 
-        assert_eq!(Cascade(vec![Card::new(1, Suit::Hearts)]), cascade,);
+        assert_eq!(Cascade::new(vec![Card::new(1, Suit::Hearts)]), cascade);
     }
 
     #[test]
     fn push_legal() {
-        let mut cascade = Cascade(vec![Card::new(13, Suit::Clubs)]);
+        let mut cascade = Cascade::new(vec![Card::new(13, Suit::Clubs)]);
         let card = Card::new(12, Suit::Hearts);
 
         assert!(cascade.is_legal(&card));
         assert_eq!(Ok(()), cascade.push(card));
 
         assert_eq!(
-            Cascade(vec![
+            Cascade::new(vec![
                 Card::new(13, Suit::Clubs),
                 Card::new(12, Suit::Hearts),
             ]),
@@ -125,7 +130,7 @@ mod tests {
 
     #[test]
     fn push_illegal_color() {
-        let mut cascade = Cascade(vec![Card::new(13, Suit::Clubs)]);
+        let mut cascade = Cascade::new(vec![Card::new(13, Suit::Clubs)]);
         let card = Card::new(12, Suit::Spades);
 
         assert_eq!(false, cascade.is_legal(&card));
@@ -137,12 +142,12 @@ mod tests {
             cascade.push(card),
         );
 
-        assert_eq!(Cascade(vec![Card::new(13, Suit::Clubs)]), cascade,);
+        assert_eq!(Cascade::new(vec![Card::new(13, Suit::Clubs)]), cascade,);
     }
 
     #[test]
     fn push_illegal_rank() {
-        let mut cascade = Cascade(vec![Card::new(13, Suit::Clubs)]);
+        let mut cascade = Cascade::new(vec![Card::new(13, Suit::Clubs)]);
         let card = Card::new(11, Suit::Hearts);
 
         assert_eq!(false, cascade.is_legal(&card));
@@ -154,18 +159,18 @@ mod tests {
             cascade.push(card),
         );
 
-        assert_eq!(Cascade(vec![Card::new(13, Suit::Clubs)]), cascade,);
+        assert_eq!(Cascade::new(vec![Card::new(13, Suit::Clubs)]), cascade,);
     }
 
     #[test]
     fn push_unchecked() {
-        let mut cascade = Cascade(vec![Card::new(13, Suit::Clubs)]);
+        let mut cascade = Cascade::new(vec![Card::new(13, Suit::Clubs)]);
         let card = Card::new(11, Suit::Hearts);
 
         cascade.push_unchecked(card);
 
         assert_eq!(
-            Cascade(vec![
+            Cascade::new(vec![
                 Card::new(13, Suit::Clubs),
                 Card::new(11, Suit::Hearts),
             ]),
@@ -175,10 +180,10 @@ mod tests {
 
     #[test]
     fn len() {
-        assert_eq!(0, Cascade(Vec::new()).len());
+        assert_eq!(0, Cascade::empty().len());
         assert_eq!(
             2,
-            Cascade(vec![
+            Cascade::new(vec![
                 Card::new(13, Suit::Clubs),
                 Card::new(12, Suit::Hearts)
             ])
@@ -188,7 +193,7 @@ mod tests {
 
     #[test]
     fn is_sequential() {
-        let cascade = Cascade(vec![
+        let cascade = Cascade::new(vec![
             Card::new(13, Suit::Clubs),
             Card::new(10, Suit::Hearts),
             Card::new(9, Suit::Diamonds),
@@ -196,16 +201,16 @@ mod tests {
         ]);
         assert!(cascade.is_sequential());
 
-        let cascade = Cascade(vec![
+        let cascade = Cascade::new(vec![
             Card::new(10, Suit::Diamonds),
             Card::new(10, Suit::Hearts),
         ]);
         assert!(cascade.is_sequential());
 
-        let cascade = Cascade(Vec::new());
+        let cascade = Cascade::empty();
         assert!(cascade.is_sequential());
 
-        let cascade = Cascade(vec![
+        let cascade = Cascade::new(vec![
             Card::new(1, Suit::Diamonds),
             Card::new(2, Suit::Hearts),
         ]);
@@ -216,13 +221,13 @@ mod tests {
     fn cards() {
         assert_eq!(
             &vec![Card::new(13, Suit::Clubs)],
-            Cascade(vec![Card::new(13, Suit::Clubs)]).cards(),
+            Cascade::new(vec![Card::new(13, Suit::Clubs)]).cards(),
         );
     }
 
     #[test]
     fn take() {
-        let mut cascade = Cascade(vec![
+        let mut cascade = Cascade::new(vec![
             Card::new(4, Suit::Clubs),
             Card::new(3, Suit::Spades),
             Card::new(2, Suit::Hearts),
@@ -235,7 +240,7 @@ mod tests {
         );
 
         assert_eq!(
-            Cascade(vec![Card::new(4, Suit::Clubs), Card::new(3, Suit::Spades)]),
+            Cascade::new(vec![Card::new(4, Suit::Clubs), Card::new(3, Suit::Spades)]),
             cascade,
         );
     }
@@ -243,7 +248,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn take_invalid() {
-        let mut cascade = Cascade(vec![Card::new(1, Suit::Hearts)]);
+        let mut cascade = Cascade::new(vec![Card::new(1, Suit::Hearts)]);
         cascade.take(2);
     }
 }

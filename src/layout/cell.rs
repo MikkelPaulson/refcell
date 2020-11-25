@@ -1,6 +1,7 @@
 use super::Card;
+use druid::Data;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Data, Debug, PartialEq)]
 pub struct Cell(Option<Card>);
 
 impl Cell {
