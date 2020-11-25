@@ -1,8 +1,9 @@
-use druid::widget::{Container, Flex, Label};
+use druid::widget::{Container, Flex};
 use druid::{AppLauncher, Color, Widget, WidgetExt, WindowDesc};
 
 mod deck;
 mod layout;
+mod widget;
 
 use deck::Deck;
 use layout::Tableau;
@@ -20,16 +21,16 @@ fn main() {
 fn ui_builder() -> impl Widget<Tableau> {
     let mut row = Flex::row();
 
-    for i in 0..=7 {
+    for _ in 0..8 {
         row.add_flex_child(
             Flex::column()
                 .with_child(
-                    Container::new(Label::new(i.to_string()).padding(5.0).center())
+                    Container::new(widget::Card::new(&deck::Card::new(1, deck::Suit::Hearts)))
                         .background(Color::rgb8(63, 63, 63))
                         .padding(5.0),
                 )
                 .with_flex_child(
-                    Container::new(Label::new(i.to_string()).padding(5.0).center())
+                    Container::new(widget::Card::new(&deck::Card::new(1, deck::Suit::Clubs)))
                         .background(Color::rgb8(63, 63, 63))
                         .padding(5.0),
                     1.0,
