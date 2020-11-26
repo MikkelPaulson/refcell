@@ -21,16 +21,19 @@ fn main() {
 fn ui_builder() -> impl Widget<Tableau> {
     let mut row = Flex::row();
 
-    for _ in 0..8 {
+    for i in 0..8 {
         row.add_flex_child(
             Flex::column()
                 .with_child(
-                    Container::new(widget::Card::new(&deck::Card::new(1, deck::Suit::Hearts)))
-                        .background(Color::rgb8(63, 63, 63))
-                        .padding(5.0),
+                    Container::new(widget::Card::new(&deck::Card::new(
+                        i + 1,
+                        deck::Suit::Hearts,
+                    )))
+                    .background(Color::rgb8(63, 63, 63))
+                    .padding(5.0),
                 )
                 .with_flex_child(
-                    Container::new(widget::Card::new(&deck::Card::new(1, deck::Suit::Clubs)))
+                    Container::new(widget::Cascade::new(i))
                         .background(Color::rgb8(63, 63, 63))
                         .padding(5.0),
                     1.0,
