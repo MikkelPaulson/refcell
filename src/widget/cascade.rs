@@ -1,12 +1,12 @@
+use crate::data;
 use crate::deck;
-use crate::layout;
 use crate::widget;
 use druid::widget::prelude::*;
 use druid::WidgetPod;
 
 pub struct Cascade {
     column: u8,
-    cards: Vec<druid::WidgetPod<layout::Tableau, widget::Card>>,
+    cards: Vec<druid::WidgetPod<data::Tableau, widget::Card>>,
 }
 
 impl Cascade {
@@ -17,10 +17,10 @@ impl Cascade {
         }
     }
 
-    fn update_cards(&mut self, tableau: &layout::Tableau) {
+    fn update_cards(&mut self, tableau: &data::Tableau) {
         self.cards.clear();
         //if self.cards.is_empty() {
-        let cascade: &layout::Cascade = &tableau.cascades[self.column as usize];
+        let cascade: &data::Cascade = &tableau.cascades[self.column as usize];
         let data_cards: &Vec<deck::Card> = cascade.cards();
 
         for data_card in data_cards.iter() {
@@ -31,8 +31,8 @@ impl Cascade {
     }
 }
 
-impl Widget<layout::Tableau> for Cascade {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut layout::Tableau, env: &Env) {
+impl Widget<data::Tableau> for Cascade {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut data::Tableau, env: &Env) {
         self.update_cards(data);
         for child in &mut self.cards {
             child.event(ctx, event, data, env);
@@ -43,7 +43,7 @@ impl Widget<layout::Tableau> for Cascade {
         &mut self,
         ctx: &mut LifeCycleCtx,
         event: &LifeCycle,
-        data: &layout::Tableau,
+        data: &data::Tableau,
         env: &Env,
     ) {
         self.update_cards(data);
@@ -55,8 +55,8 @@ impl Widget<layout::Tableau> for Cascade {
     fn update(
         &mut self,
         ctx: &mut UpdateCtx,
-        _old_data: &layout::Tableau,
-        data: &layout::Tableau,
+        _old_data: &data::Tableau,
+        data: &data::Tableau,
         env: &Env,
     ) {
         self.update_cards(data);
@@ -69,7 +69,7 @@ impl Widget<layout::Tableau> for Cascade {
         &mut self,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        data: &layout::Tableau,
+        data: &data::Tableau,
         env: &Env,
     ) -> Size {
         let size = bc.max();
@@ -79,7 +79,7 @@ impl Widget<layout::Tableau> for Cascade {
         size
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &layout::Tableau, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &data::Tableau, env: &Env) {
         for child in &mut self.cards {
             child.paint(ctx, data, env);
         }

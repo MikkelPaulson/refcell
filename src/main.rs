@@ -1,12 +1,12 @@
 use druid::widget::{Container, Flex};
 use druid::{AppLauncher, Color, Widget, WidgetExt, WindowDesc};
 
+mod data;
 mod deck;
-mod layout;
 mod widget;
 
+use data::Tableau;
 use deck::Deck;
-use layout::Tableau;
 
 fn main() {
     let tableau = Tableau::deal(Deck::shuffled());
