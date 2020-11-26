@@ -1,5 +1,4 @@
 use crate::data;
-use crate::deck;
 use crate::widget;
 use druid::widget::prelude::*;
 use druid::WidgetPod;
@@ -21,7 +20,7 @@ impl Cascade {
         self.cards.clear();
         //if self.cards.is_empty() {
         let cascade: &data::Cascade = &tableau.cascades[self.column as usize];
-        let data_cards: &Vec<deck::Card> = cascade.cards();
+        let data_cards: &Vec<data::Card> = cascade.cards();
 
         for data_card in data_cards.iter() {
             self.cards

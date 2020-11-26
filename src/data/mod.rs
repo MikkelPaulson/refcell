@@ -1,14 +1,15 @@
-use super::deck::{Card, Deck, Suit};
 use druid::Data;
 use std::convert::TryInto;
 use std::iter;
 
 pub use cascade::Cascade;
 pub use cell::Cell;
+pub use deck::{Card, Deck, Suit};
 pub use foundation::Foundation;
 
 mod cascade;
 mod cell;
+mod deck;
 mod foundation;
 
 #[derive(Clone, Data, Debug)]

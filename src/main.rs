@@ -2,14 +2,10 @@ use druid::widget::{Container, Flex};
 use druid::{AppLauncher, Color, Widget, WidgetExt, WindowDesc};
 
 mod data;
-mod deck;
 mod widget;
 
-use data::Tableau;
-use deck::Deck;
-
 fn main() {
-    let tableau = Tableau::deal(Deck::shuffled());
+    let tableau = data::Tableau::deal(data::Deck::shuffled());
     let main_window = WindowDesc::new(ui_builder);
 
     AppLauncher::with_window(main_window)
@@ -18,16 +14,16 @@ fn main() {
         .expect("launch failed");
 }
 
-fn ui_builder() -> impl Widget<Tableau> {
+fn ui_builder() -> impl Widget<data::Tableau> {
     let mut row = Flex::row();
 
     for i in 0..8 {
         row.add_flex_child(
             Flex::column()
                 .with_child(
-                    Container::new(widget::Card::new(&deck::Card::new(
+                    Container::new(widget::Card::new(&data::Card::new(
                         i + 1,
-                        deck::Suit::Hearts,
+                        data::Suit::Hearts,
                     )))
                     .background(Color::rgb8(63, 63, 63))
                     .padding(5.0),
