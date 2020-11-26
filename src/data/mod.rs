@@ -1,5 +1,6 @@
 use druid::Data;
 use std::convert::TryInto;
+use std::fmt;
 use std::iter;
 
 pub use cascade::Cascade;
@@ -52,6 +53,42 @@ impl Tableau {
 
     pub fn is_won(&self) -> bool {
         self.cascades.iter().all(|cascade| cascade.is_sequential())
+    }
+}
+
+impl fmt::Display for Tableau {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "ａｂｃｄ  ｗｘｙｚ")?;
+        self.cells
+            .iter()
+            .try_for_each(|cell| write!(f, "{}", cell))?;
+        write!(f, "  ")?;
+        self.foundations
+            .iter()
+            .try_for_each(|cell| write!(f, "{}", cell))?;
+        write!(f, "\n\n")?;
+        writeln!(f, " １２３４５６７８")?;
+
+        let longest_cascade = self
+            .cascades
+            .iter()
+            .map(|cascade| cascade.len())
+            .max()
+            .unwrap_or(0);
+
+        for row in 0..longest_cascade {
+            write!(f, " ")?;
+            for cascade in self.cascades.iter() {
+                if let Some(card) = cascade.cards().get(row) {
+                    write!(f, "{}", card)?;
+                } else {
+                    write!(f, "  ")?;
+                }
+            }
+            write!(f, "\n")?;
+        }
+
+        Ok(())
     }
 }
 

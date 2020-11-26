@@ -1,5 +1,6 @@
 use super::{Card, Suit};
 use druid::Data;
+use std::fmt;
 use std::rc::Rc;
 
 #[derive(Clone, Data, Debug, PartialEq)]
@@ -41,6 +42,16 @@ impl Foundation {
             }
         } else {
             Err((card, "That card is not valid on this foundation."))
+        }
+    }
+}
+
+impl fmt::Display for Foundation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(card) = self.peek() {
+            write!(f, "{}", card)
+        } else {
+            write!(f, "\x1b[2m🂠\x1b[0m ")
         }
     }
 }

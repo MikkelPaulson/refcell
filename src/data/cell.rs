@@ -1,5 +1,6 @@
 use super::Card;
 use druid::Data;
+use std::fmt;
 
 #[derive(Clone, Data, Debug, PartialEq)]
 pub struct Cell(Option<Card>);
@@ -32,6 +33,16 @@ impl Cell {
 
     pub fn take(&mut self) -> Option<Card> {
         self.0.take()
+    }
+}
+
+impl fmt::Display for Cell {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(card) = self.peek() {
+            write!(f, "{}", card)
+        } else {
+            write!(f, "\x1b[2m🂠\x1b[0m ")
+        }
     }
 }
 

@@ -1,6 +1,8 @@
 use druid::Data;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use std::char;
+use std::fmt;
 use std::iter;
 use std::rc::Rc;
 
@@ -94,6 +96,31 @@ impl Card {
 
     pub fn get_suit(&self) -> Suit {
         self.1
+    }
+}
+
+impl fmt::Display for Card {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "\x1b[{}m{}\x1b[0m ",
+            if self.get_suit().is_red() { "91" } else { "39" },
+            char::from_u32(
+                0x1f0a0
+                    + if self.get_rank() < 12 {
+                        self.get_rank()
+                    } else {
+                        self.get_rank() + 1
+                    } as u32
+                    + match self.get_suit() {
+                        Suit::Spades => 0x00,
+                        Suit::Hearts => 0x10,
+                        Suit::Diamonds => 0x20,
+                        Suit::Clubs => 0x30,
+                    }
+            )
+            .unwrap()
+        )
     }
 }
 

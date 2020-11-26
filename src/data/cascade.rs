@@ -1,5 +1,6 @@
 use super::Card;
 use druid::Data;
+use std::fmt;
 use std::rc::Rc;
 
 #[derive(Clone, Data, Debug, PartialEq)]
@@ -66,6 +67,15 @@ impl Cascade {
         Rc::get_mut(&mut self.0)
             .map(|cards| cards.split_off(cards.len() - count))
             .unwrap()
+    }
+}
+
+impl fmt::Display for Cascade {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for card in self.cards() {
+            writeln!(f, "{}", card)?;
+        }
+        Ok(())
     }
 }
 
