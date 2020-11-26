@@ -1,8 +1,8 @@
 use druid::widget::{Container, Flex};
 use druid::{AppLauncher, Color, Widget, WidgetExt, WindowDesc};
 
-mod data;
-mod widget;
+use refcell::data;
+use refcell::widget;
 
 fn main() {
     let tableau = data::Tableau::deal(data::Deck::shuffled());
