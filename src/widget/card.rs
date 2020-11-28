@@ -1,7 +1,6 @@
 use crate::data;
 use druid::widget::prelude::*;
 use druid::widget::Svg;
-use druid::Data;
 
 pub struct Card {
     svg: Svg,
@@ -76,20 +75,20 @@ impl Card {
     }
 }
 
-impl<T: Data> Widget<T> for Card {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+impl Widget<()> for Card {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut (), env: &Env) {
         self.svg.event(ctx, event, data, env)
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &(), env: &Env) {
         self.svg.lifecycle(ctx, event, data, env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &(), data: &(), env: &Env) {
         self.svg.update(ctx, old_data, data, env)
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &(), env: &Env) -> Size {
         let mut size = bc.max();
         match (bc.is_width_bounded(), bc.is_height_bounded()) {
             (true, true) => {
@@ -112,7 +111,7 @@ impl<T: Data> Widget<T> for Card {
         size
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &(), env: &Env) {
         self.svg.paint(ctx, data, env)
     }
 }

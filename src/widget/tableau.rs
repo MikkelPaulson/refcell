@@ -1,8 +1,9 @@
 use super::Card;
 use crate::data;
+use druid::lens;
 use druid::widget::prelude::*;
 use druid::widget::{Container, Flex, WidgetExt};
-use druid::Color;
+use druid::{Color, LensExt};
 
 pub struct Tableau {
     child: Flex<data::Tableau>,
@@ -17,12 +18,14 @@ impl Tableau {
                     .with_child(
                         Container::new(Card::new(&data::Card::new(i + 1, data::Suit::Hearts)))
                             .background(Color::rgb8(63, 63, 63))
-                            .padding(5.),
+                            .padding(5.)
+                            .lens(lens::Id.map(|_| (), |_, _| ())),
                     )
                     .with_flex_child(
                         Container::new(Card::new(&data::Card::new(i + 1, data::Suit::Clubs)))
                             .background(Color::rgb8(63, 63, 63))
-                            .padding(5.),
+                            .padding(5.)
+                            .lens(lens::Id.map(|_| (), |_, _| ())),
                         1.,
                     ),
                 1.,
