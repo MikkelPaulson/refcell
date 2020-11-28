@@ -93,7 +93,10 @@ mod test_action {
     #[test]
     fn invalid() {
         assert_eq!(Err("Invalid input."), "0a\n".parse::<Action>());
-        assert_eq!(Err("Invalid input."), "aa\n".parse::<Action>());
+        assert_eq!(
+            Err("The source and destination are the same."),
+            "aa\n".parse::<Action>()
+        );
         assert_eq!(Err("Invalid input."), "\n".parse::<Action>());
         assert_eq!(Err("Invalid input."), "1a1\n".parse::<Action>());
         assert_eq!(Err("Invalid input."), "".parse::<Action>());
