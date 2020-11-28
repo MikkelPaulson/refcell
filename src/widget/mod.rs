@@ -1,5 +1,5 @@
 mod card;
-mod cascade;
+mod tableau;
 
 pub use card::Card;
-pub use cascade::Cascade;
+pub use tableau::Tableau;
