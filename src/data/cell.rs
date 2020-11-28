@@ -1,30 +1,32 @@
 use super::Card;
-use druid::Data;
+use druid::{Data, Lens};
 use std::fmt;
 
-#[derive(Clone, Data, Debug, PartialEq)]
-pub struct Cell(Option<Card>);
+#[derive(Clone, Data, Debug, Lens, PartialEq)]
+pub struct Cell {
+    card: Option<Card>,
+}
 
 impl Cell {
     pub fn new(card: Card) -> Self {
-        Self(Some(card))
+        Self { card: Some(card) }
     }
 
     pub fn empty() -> Self {
-        Self(None)
+        Self { card: None }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.0.is_none()
+        self.card.is_none()
     }
 
     pub fn peek(&self) -> Option<&Card> {
-        self.0.as_ref()
+        self.card.as_ref()
     }
 
     pub fn push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
         if self.is_empty() {
-            self.0 = Some(card);
+            self.card = Some(card);
             Ok(())
         } else {
             Err((card, "A card is already present on that cell."))
@@ -32,7 +34,7 @@ impl Cell {
     }
 
     pub fn take(&mut self) -> Option<Card> {
-        self.0.take()
+        self.card.take()
     }
 }
 
@@ -53,54 +55,58 @@ mod tests {
 
     #[test]
     fn new() {
-        assert_eq!(Cell(some_card()), Cell::new(card()));
+        assert_eq!(cell(some_card()), Cell::new(card()));
     }
 
     #[test]
     fn empty() {
-        assert_eq!(Cell(None), Cell::empty(),);
+        assert_eq!(cell(None), Cell::empty(),);
     }
 
     #[test]
     fn is_empty() {
-        assert!(Cell(None).is_empty());
-        assert_eq!(false, Cell(some_card()).is_empty());
+        assert!(cell(None).is_empty());
+        assert_eq!(false, cell(some_card()).is_empty());
     }
 
     #[test]
     fn peek() {
-        assert_eq!(None, Cell(None).peek());
-        assert_eq!(Some(&card()), Cell(some_card()).peek());
+        assert_eq!(None, cell(None).peek());
+        assert_eq!(Some(&card()), cell(some_card()).peek());
     }
 
     #[test]
     fn push_empty() {
-        let mut cell = Cell(None);
-        assert_eq!(Ok(()), cell.push(card()));
-        assert_eq!(Cell(some_card()), cell);
+        let mut test = cell(None);
+        assert_eq!(Ok(()), test.push(card()));
+        assert_eq!(cell(some_card()), test);
     }
 
     #[test]
     fn push_not_empty() {
-        let mut cell = Cell(some_card());
+        let mut test = cell(some_card());
         assert_eq!(
             Err((card(), "A card is already present on that cell.")),
-            cell.push(card()),
+            test.push(card()),
         );
     }
 
     #[test]
     fn take_empty() {
-        let mut cell = Cell(None);
-        assert_eq!(None, cell.take());
-        assert_eq!(Cell(None), cell);
+        let mut test = cell(None);
+        assert_eq!(None, test.take());
+        assert_eq!(cell(None), test);
     }
 
     #[test]
     fn take_not_empty() {
-        let mut cell = Cell(some_card());
-        assert_eq!(some_card(), cell.take());
-        assert_eq!(Cell(None), cell);
+        let mut test = cell(some_card());
+        assert_eq!(some_card(), test.take());
+        assert_eq!(cell(None), test);
+    }
+
+    fn cell(card: Option<Card>) -> Cell {
+        Cell { card }
     }
 
     fn some_card() -> Option<Card> {
