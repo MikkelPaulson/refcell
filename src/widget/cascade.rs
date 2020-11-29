@@ -1,40 +1,36 @@
+use super::Card;
 use crate::data;
 use crate::widget;
 use druid::widget::prelude::*;
-use druid::WidgetPod;
 
 pub struct Cascade {
-    column: u8,
-    cards: Vec<druid::WidgetPod<data::Tableau, widget::Card>>,
+    cards: Vec<widget::Card>,
 }
 
 impl Cascade {
-    pub fn new(column: u8) -> Self {
-        Self {
-            column,
-            cards: Vec::new(),
-        }
+    pub fn new() -> Self {
+        Self { cards: Vec::new() }
     }
 
-    fn update_cards(&mut self, tableau: &data::Tableau) {
-        self.cards.clear();
-        //if self.cards.is_empty() {
-        let cascade: &data::Cascade = &tableau.cascades[self.column as usize];
-        let data_cards: &Vec<data::Card> = cascade.cards();
+    fn update_cards(&mut self, data: &data::Cascade) {
+        let widget_len = self.cards.len();
+        let data_len = data.cards().len();
 
-        for data_card in data_cards.iter() {
-            self.cards
-                .push(WidgetPod::new(widget::Card::new(data_card)));
+        if widget_len > data_len {
+            self.cards.truncate(data_len);
+        } else if widget_len < data_len {
+            for i in widget_len..data_len {
+                self.cards.push(Card::new(&data.cards()[i]));
+            }
         }
-        //}
     }
 }
 
-impl Widget<data::Tableau> for Cascade {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut data::Tableau, env: &Env) {
+impl Widget<data::Cascade> for Cascade {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut data::Cascade, env: &Env) {
         self.update_cards(data);
         for child in &mut self.cards {
-            child.event(ctx, event, data, env);
+            child.event(ctx, event, &mut (), env);
         }
     }
 
@@ -42,45 +38,41 @@ impl Widget<data::Tableau> for Cascade {
         &mut self,
         ctx: &mut LifeCycleCtx,
         event: &LifeCycle,
-        data: &data::Tableau,
+        data: &data::Cascade,
         env: &Env,
     ) {
         self.update_cards(data);
         for child in &mut self.cards {
-            child.lifecycle(ctx, event, data, env);
+            child.lifecycle(ctx, event, &(), env);
         }
     }
 
     fn update(
         &mut self,
         ctx: &mut UpdateCtx,
-        _old_data: &data::Tableau,
-        data: &data::Tableau,
+        _old_data: &data::Cascade,
+        data: &data::Cascade,
         env: &Env,
     ) {
         self.update_cards(data);
         for child in &mut self.cards {
-            child.update(ctx, data, env);
+            child.update(ctx, &(), &(), env);
         }
     }
 
     fn layout(
         &mut self,
-        ctx: &mut LayoutCtx,
+        _ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        data: &data::Tableau,
-        env: &Env,
+        _data: &data::Cascade,
+        _env: &Env,
     ) -> Size {
-        let size = bc.max();
-        for child in &mut self.cards {
-            child.layout(ctx, bc, data, env);
-        }
-        size
+        bc.max()
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &data::Tableau, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &data::Cascade, env: &Env) {
         for child in &mut self.cards {
-            child.paint(ctx, data, env);
+            child.paint(ctx, &(), env);
         }
     }
 }

@@ -1,4 +1,4 @@
-use super::{Card, Single};
+use super::{Cascade, Single};
 use crate::data;
 use druid::lens;
 use druid::widget::prelude::*;
@@ -40,10 +40,13 @@ impl Tableau {
             }
 
             column.add_flex_child(
-                Container::new(Card::new(&data::Card::new(i as u8 + 1, data::Suit::Clubs)))
+                Container::new(Cascade::new())
                     .background(Color::rgb8(63, 63, 63))
                     .padding(5.)
-                    .lens(lens::Id.map(|_| (), |_, _| ())),
+                    .lens(lens::Id.map(
+                        move |t: &data::Tableau| t.cascades[i].clone(),
+                        move |t: &mut data::Tableau, c: data::Cascade| t.cascades[i] = c,
+                    )),
                 1.,
             );
 
