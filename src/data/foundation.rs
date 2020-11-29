@@ -1,4 +1,4 @@
-use super::{Card, Suit};
+use super::{Card, Single, Suit};
 use druid::Data;
 use std::fmt;
 use std::rc::Rc;
@@ -17,14 +17,6 @@ impl Foundation {
 
     pub fn get_rank(&self) -> u8 {
         self.peek().map(|card| card.get_rank()).unwrap_or(0)
-    }
-
-    pub fn peek(&self) -> Option<&Card> {
-        self.0.last()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
     }
 
     pub fn is_legal(&self, card: &Card) -> bool {
@@ -46,6 +38,16 @@ impl Foundation {
     }
 }
 
+impl Single for Foundation {
+    fn peek(&self) -> Option<&Card> {
+        self.0.last()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
 impl fmt::Display for Foundation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(card) = self.peek() {
@@ -58,7 +60,7 @@ impl fmt::Display for Foundation {
 
 #[cfg(test)]
 mod tests {
-    use super::{Card, Foundation, Suit};
+    use super::{Card, Foundation, Single, Suit};
     use std::rc::Rc;
 
     #[test]

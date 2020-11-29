@@ -1,4 +1,4 @@
-use super::Card;
+use super::{Card, Single};
 use druid::{Data, Lens};
 use std::fmt;
 
@@ -16,14 +16,6 @@ impl Cell {
         Self { card: None }
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.card.is_none()
-    }
-
-    pub fn peek(&self) -> Option<&Card> {
-        self.card.as_ref()
-    }
-
     pub fn push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
         if self.is_empty() {
             self.card = Some(card);
@@ -35,6 +27,16 @@ impl Cell {
 
     pub fn take(&mut self) -> Option<Card> {
         self.card.take()
+    }
+}
+
+impl Single for Cell {
+    fn is_empty(&self) -> bool {
+        self.card.is_none()
+    }
+
+    fn peek(&self) -> Option<&Card> {
+        self.card.as_ref()
     }
 }
 
@@ -51,7 +53,7 @@ impl fmt::Display for Cell {
 #[cfg(test)]
 mod tests {
     use super::super::Suit;
-    use super::{Card, Cell};
+    use super::{Card, Cell, Single};
 
     #[test]
     fn new() {

@@ -1,5 +1,6 @@
 use super::Card;
 use crate::data;
+use crate::data::Single;
 use druid::widget::prelude::*;
 
 pub struct Cell {

@@ -7,11 +7,13 @@ pub use cascade::Cascade;
 pub use cell::Cell;
 pub use deck::{Card, Deck, Suit};
 pub use foundation::Foundation;
+pub use single::Single;
 
 mod cascade;
 mod cell;
 mod deck;
 mod foundation;
+mod single;
 
 #[derive(Clone, Data, Debug, Lens)]
 pub struct Tableau {
