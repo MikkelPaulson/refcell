@@ -10,6 +10,14 @@ impl Cell {
     pub fn new() -> Self {
         Self { card: None }
     }
+
+    fn update_data(&mut self, data: &data::Cell) {
+        match (self.card.is_none(), data.is_empty()) {
+            (true, false) => self.card = data.peek().map(|card| Card::new(card)),
+            (false, true) => self.card = None,
+            _ => {}
+        }
+    }
 }
 
 impl Widget<data::Cell> for Cell {
@@ -23,19 +31,19 @@ impl Widget<data::Cell> for Cell {
         &mut self,
         ctx: &mut LifeCycleCtx,
         lifecycle: &LifeCycle,
-        _data: &data::Cell,
+        data: &data::Cell,
         env: &Env,
     ) {
+        self.update_data(data);
+
         self.card
             .as_mut()
             .map(|card| card.lifecycle(ctx, lifecycle, &mut (), env));
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &data::Cell, data: &data::Cell, env: &Env) {
-        match (old_data.is_empty(), data.is_empty()) {
-            (true, false) => self.card = data.peek().map(|card| Card::new(card)),
-            (false, true) => self.card = None,
-            _ => {}
+        if old_data != data {
+            self.update_data(data);
         }
 
         self.card
