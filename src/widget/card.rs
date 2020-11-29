@@ -73,22 +73,8 @@ impl Card {
             _ => unreachable!(),
         }
     }
-}
 
-impl Widget<()> for Card {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut (), env: &Env) {
-        self.svg.event(ctx, event, data, env)
-    }
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &(), env: &Env) {
-        self.svg.lifecycle(ctx, event, data, env)
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &(), data: &(), env: &Env) {
-        self.svg.update(ctx, old_data, data, env)
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &(), env: &Env) -> Size {
+    pub fn get_size(bc: &BoxConstraints) -> Size {
         let mut size = bc.max();
         match (bc.is_width_bounded(), bc.is_height_bounded()) {
             (true, true) => {
@@ -109,6 +95,30 @@ impl Widget<()> for Card {
             }
         }
         size
+    }
+}
+
+impl Widget<()> for Card {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut (), env: &Env) {
+        self.svg.event(ctx, event, data, env)
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &(), env: &Env) {
+        self.svg.lifecycle(ctx, event, data, env)
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &(), data: &(), env: &Env) {
+        self.svg.update(ctx, old_data, data, env)
+    }
+
+    fn layout(
+        &mut self,
+        _ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &(),
+        _env: &Env,
+    ) -> Size {
+        Self::get_size(bc)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &(), env: &Env) {

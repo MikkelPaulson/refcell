@@ -1,4 +1,4 @@
-use super::Card;
+use super::{Card, Cell};
 use crate::data;
 use druid::lens;
 use druid::widget::prelude::*;
@@ -11,25 +11,38 @@ pub struct Tableau {
 
 impl Tableau {
     pub fn new() -> Self {
-        let mut row = Flex::row();
+        let mut row: Flex<data::Tableau> = Flex::row();
         for i in 0..8 {
-            row.add_flex_child(
-                Flex::column()
-                    .with_child(
-                        Container::new(Card::new(&data::Card::new(i + 1, data::Suit::Hearts)))
-                            .background(Color::rgb8(63, 63, 63))
-                            .padding(5.)
-                            .lens(lens::Id.map(|_| (), |_, _| ())),
-                    )
-                    .with_flex_child(
-                        Container::new(Card::new(&data::Card::new(i + 1, data::Suit::Clubs)))
-                            .background(Color::rgb8(63, 63, 63))
-                            .padding(5.)
-                            .lens(lens::Id.map(|_| (), |_, _| ())),
-                        1.,
-                    ),
+            let mut column = Flex::column();
+
+            if i < 4 {
+                column.add_child(
+                    Container::new(Cell::new())
+                        .background(Color::rgb8(63, 63, 63))
+                        .padding(5.)
+                        .lens(lens::Id.map(
+                            move |t: &data::Tableau| t.cells[i].clone(),
+                            move |t: &mut data::Tableau, c: data::Cell| t.cells[i] = c,
+                        )),
+                );
+            } else {
+                column.add_child(
+                    Container::new(Card::new(&data::Card::new(i as u8 + 1, data::Suit::Hearts)))
+                        .background(Color::rgb8(63, 63, 63))
+                        .padding(5.)
+                        .lens(lens::Id.map(|_| (), |_, _| ())),
+                );
+            }
+
+            column.add_flex_child(
+                Container::new(Card::new(&data::Card::new(i as u8 + 1, data::Suit::Clubs)))
+                    .background(Color::rgb8(63, 63, 63))
+                    .padding(5.)
+                    .lens(lens::Id.map(|_| (), |_, _| ())),
                 1.,
             );
+
+            row.add_flex_child(column, 1.);
         }
         Tableau { child: row }
     }

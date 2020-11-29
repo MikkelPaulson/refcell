@@ -1,5 +1,4 @@
-use druid::widget as base_widget;
-use druid::{AppLauncher, Color, Widget, WidgetExt, WindowDesc};
+use druid::{AppLauncher, WindowDesc};
 
 use refcell::data;
 use refcell::widget;

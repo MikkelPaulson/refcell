@@ -1,4 +1,4 @@
-use druid::Data;
+use druid::{Data, Lens};
 use std::convert::TryInto;
 use std::fmt;
 use std::iter;
@@ -13,7 +13,7 @@ mod cell;
 mod deck;
 mod foundation;
 
-#[derive(Clone, Data, Debug)]
+#[derive(Clone, Data, Debug, Lens)]
 pub struct Tableau {
     pub cells: [Cell; 4],
     pub foundations: [Foundation; 4],
