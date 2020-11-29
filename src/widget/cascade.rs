@@ -1,10 +1,11 @@
 use super::Card;
 use crate::data;
-use crate::widget;
 use druid::widget::prelude::*;
+use druid::{Point, Rect, WidgetPod};
+use std::cmp;
 
 pub struct Cascade {
-    cards: Vec<widget::Card>,
+    cards: Vec<WidgetPod<(), Card>>,
 }
 
 impl Cascade {
@@ -16,12 +17,16 @@ impl Cascade {
         let widget_len = self.cards.len();
         let data_len = data.cards().len();
 
-        if widget_len > data_len {
-            self.cards.truncate(data_len);
-        } else if widget_len < data_len {
-            for i in widget_len..data_len {
-                self.cards.push(Card::new(&data.cards()[i]));
+        match widget_len.cmp(&data_len) {
+            cmp::Ordering::Less => {
+                for i in widget_len..data_len {
+                    self.cards.push(WidgetPod::new(Card::new(&data.cards()[i])));
+                }
             }
+            cmp::Ordering::Greater => {
+                self.cards.truncate(data_len);
+            }
+            cmp::Ordering::Equal => {}
         }
     }
 }
@@ -56,18 +61,48 @@ impl Widget<data::Cascade> for Cascade {
     ) {
         self.update_cards(data);
         for child in &mut self.cards {
-            child.update(ctx, &(), &(), env);
+            child.update(ctx, &(), env);
         }
     }
 
     fn layout(
         &mut self,
-        _ctx: &mut LayoutCtx,
+        ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         _data: &data::Cascade,
-        _env: &Env,
+        env: &Env,
     ) -> Size {
-        bc.max()
+        let container_size = bc.max();
+
+        match self.cards.len() {
+            0 => {}
+            1 => self.cards[0].set_layout_rect(
+                ctx,
+                &(),
+                env,
+                Rect::from_origin_size(Point::ORIGIN, Card::get_size(bc)),
+            ),
+            _ => {
+                let card_size = Card::get_size(bc);
+                let step_height = ((container_size.height - card_size.height)
+                    / (self.cards.len() - 1) as f64)
+                    .min(card_size.height / 5.);
+
+                for i in 0..self.cards.len() {
+                    self.cards[i].set_layout_rect(
+                        ctx,
+                        &(),
+                        env,
+                        Rect::from_origin_size(
+                            Point::new(0., step_height * i as f64),
+                            Card::get_size(bc),
+                        ),
+                    );
+                }
+            }
+        }
+
+        container_size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &data::Cascade, env: &Env) {

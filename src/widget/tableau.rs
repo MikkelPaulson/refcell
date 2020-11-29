@@ -41,7 +41,6 @@ impl Tableau {
 
             column.add_flex_child(
                 Container::new(Cascade::new())
-                    .background(Color::rgb8(63, 63, 63))
                     .padding(5.)
                     .lens(lens::Id.map(
                         move |t: &data::Tableau| t.cascades[i].clone(),
