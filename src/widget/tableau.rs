@@ -27,10 +27,15 @@ impl Tableau {
                 );
             } else {
                 column.add_child(
-                    Container::new(Card::new(&data::Card::new(i as u8 + 1, data::Suit::Hearts)))
+                    Container::new(Single::new())
                         .background(Color::rgb8(63, 63, 63))
                         .padding(5.)
-                        .lens(lens::Id.map(|_| (), |_, _| ())),
+                        .lens(lens::Id.map(
+                            move |t: &data::Tableau| t.foundations[i - 4].clone(),
+                            move |t: &mut data::Tableau, f: data::Foundation| {
+                                t.foundations[i - 4] = f
+                            },
+                        )),
                 );
             }
 
