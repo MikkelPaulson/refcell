@@ -1,4 +1,4 @@
-use super::{Card, Cell};
+use super::{Card, Single};
 use crate::data;
 use druid::lens;
 use druid::widget::prelude::*;
@@ -17,7 +17,7 @@ impl Tableau {
 
             if i < 4 {
                 column.add_child(
-                    Container::new(Cell::new())
+                    Container::new(Single::new())
                         .background(Color::rgb8(63, 63, 63))
                         .padding(5.)
                         .lens(lens::Id.map(

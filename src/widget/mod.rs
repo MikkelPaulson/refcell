@@ -1,7 +1,7 @@
 mod card;
-mod cell;
+mod single;
 mod tableau;
 
 pub use card::Card;
-pub use cell::Cell;
+pub use single::Single;
 pub use tableau::Tableau;
