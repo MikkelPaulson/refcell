@@ -3,12 +3,14 @@ use std::convert::TryInto;
 use std::fmt;
 use std::iter;
 
+pub use action::{Action, Coordinate};
 pub use cascade::Cascade;
 pub use cell::Cell;
 pub use deck::{Card, Deck, Suit};
 pub use foundation::Foundation;
 pub use single::Single;
 
+mod action;
 mod cascade;
 mod cell;
 mod deck;
