@@ -2,22 +2,17 @@ use super::Card;
 use crate::data;
 use druid::widget::prelude::*;
 use druid::Data;
-use std::marker;
 
-pub struct Single<T> {
+pub struct Single {
     card: Option<Card>,
-    phantom: marker::PhantomData<T>,
 }
 
-impl<T: data::Single + Data> Single<T> {
+impl Single {
     pub fn new() -> Self {
-        Self {
-            card: None,
-            phantom: marker::PhantomData,
-        }
+        Self { card: None }
     }
 
-    fn update_data(&mut self, data: &T) {
+    fn update_data<T: data::Single + Data>(&mut self, data: &T) {
         match (self.card.is_none(), data.is_empty()) {
             (true, false) => self.card = data.peek().map(|card| Card::new(card)),
             (false, true) => self.card = None,
@@ -26,7 +21,7 @@ impl<T: data::Single + Data> Single<T> {
     }
 }
 
-impl<T: data::Single + Data> Widget<T> for Single<T> {
+impl<T: data::Single + Data> Widget<T> for Single {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, env: &Env) {
         self.card
             .as_mut()
