@@ -55,6 +55,32 @@ impl Tableau {
         tableau
     }
 
+    pub fn action(&mut self, action: Action) -> Result<(), &'static str> {
+        if let Some(card) = match action.from {
+            Coordinate::Cascade(n) => self.cascades[n as usize].pop(),
+            Coordinate::Cell(n) => self.cells[n as usize].take(),
+            Coordinate::Foundation(_) => return Err("You cannot take a card from a foundation."),
+        } {
+            if let Err((card, message)) = match action.to {
+                Coordinate::Cascade(n) => self.cascades[n as usize].push(card),
+                Coordinate::Cell(n) => self.cells[n as usize].push(card),
+                Coordinate::Foundation(n) => self.foundations[n as usize].push(card),
+            } {
+                match action.from {
+                    Coordinate::Cascade(n) => self.cascades[n as usize].push_unchecked(card),
+                    Coordinate::Cell(n) => self.cells[n as usize].push(card).unwrap(),
+                    Coordinate::Foundation(_) => unreachable!(),
+                }
+
+                Err(message)
+            } else {
+                Ok(())
+            }
+        } else {
+            Err("That space is empty.")
+        }
+    }
+
     pub fn is_won(&self) -> bool {
         self.cascades.iter().all(|cascade| cascade.is_sequential())
     }

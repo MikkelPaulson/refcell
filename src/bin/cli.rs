@@ -14,31 +14,11 @@ fn main() {
 
         match buffer.parse::<Action>() {
             Ok(action) => {
-                if let Some(card) = match action.from {
-                    Coordinate::Cascade(n) => tableau.cascades[n as usize].pop(),
-                    Coordinate::Cell(n) => tableau.cells[n as usize].take(),
-                    Coordinate::Foundation(_) => unreachable!(),
-                } {
-                    if let Err((card, message)) = match action.to {
-                        Coordinate::Cascade(n) => tableau.cascades[n as usize].push(card),
-                        Coordinate::Cell(n) => tableau.cells[n as usize].push(card),
-                        Coordinate::Foundation(n) => tableau.foundations[n as usize].push(card),
-                    } {
-                        match action.from {
-                            Coordinate::Cascade(n) => {
-                                tableau.cascades[n as usize].push_unchecked(card)
-                            }
-                            Coordinate::Cell(n) => tableau.cells[n as usize].push(card).unwrap(),
-                            Coordinate::Foundation(_) => unreachable!(),
-                        }
-
-                        println!("{}", message);
-                    }
-                } else {
-                    println!("That space is empty.");
+                if let Err(msg) = tableau.action(action) {
+                    println!("{}", msg);
                 }
             }
-            Err(message) => println!("{}", message),
+            Err(msg) => println!("{}", msg),
         }
         println!("{}", tableau);
     }
