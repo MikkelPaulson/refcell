@@ -137,6 +137,13 @@ mod test_card {
     }
 
     #[test]
+    fn eq() {
+        assert_eq!(Card(1, Suit::Hearts), Card(1, Suit::Hearts));
+        assert_ne!(Card(2, Suit::Hearts), Card(1, Suit::Hearts));
+        assert_ne!(Card(1, Suit::Spades), Card(1, Suit::Hearts));
+    }
+
+    #[test]
     #[should_panic(expected = "Invalid rank.")]
     fn new_too_small() {
         Card::new(0, Suit::Spades);

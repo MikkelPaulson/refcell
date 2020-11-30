@@ -124,7 +124,7 @@ impl fmt::Display for Tableau {
 
 #[cfg(test)]
 mod tests {
-    use super::{Card, Cell, Deck, Foundation, Suit, Tableau};
+    use super::{Action, Card, Cell, Coordinate, Deck, Foundation, Single, Suit, Tableau};
 
     #[test]
     fn deal() {
@@ -191,5 +191,176 @@ mod tests {
     #[test]
     fn is_won_empty() {
         assert!(Tableau::empty().is_won());
+    }
+
+    #[test]
+    fn action_legal_to_foundation() {
+        let mut tableau = Tableau::empty();
+        tableau.cells[0].push(Card::new(1, Suit::Clubs)).unwrap();
+        tableau.cascades[0].push(Card::new(2, Suit::Clubs)).unwrap();
+
+        assert_eq!(
+            Ok(()),
+            tableau.action(Action {
+                from: Coordinate::Cell(0),
+                to: Coordinate::Foundation(0),
+            }),
+        );
+        assert_eq!(
+            Ok(()),
+            tableau.action(Action {
+                from: Coordinate::Cascade(0),
+                to: Coordinate::Foundation(0),
+            }),
+        );
+
+        assert!(tableau.cells[0].is_empty());
+        assert_eq!(0, tableau.cascades[0].len());
+        assert_eq!(
+            Some(&Card::new(2, Suit::Clubs)),
+            tableau.foundations[0].peek(),
+        );
+    }
+
+    #[test]
+    fn action_legal_to_cascade() {
+        let mut tableau = Tableau::empty();
+        tableau.cells[0].push(Card::new(13, Suit::Clubs)).unwrap();
+        tableau.cascades[0]
+            .push(Card::new(12, Suit::Hearts))
+            .unwrap();
+
+        assert_eq!(
+            Ok(()),
+            tableau.action(Action {
+                from: Coordinate::Cell(0),
+                to: Coordinate::Cascade(1),
+            }),
+        );
+
+        assert_eq!(
+            Ok(()),
+            tableau.action(Action {
+                from: Coordinate::Cascade(0),
+                to: Coordinate::Cascade(1),
+            }),
+        );
+
+        assert!(tableau.cells[0].is_empty());
+        assert_eq!(0, tableau.cascades[0].len());
+        assert_eq!(2, tableau.cascades[1].len());
+    }
+
+    #[test]
+    fn action_legal_to_cell() {
+        let mut tableau = Tableau::empty();
+        tableau.cells[0].push(Card::new(1, Suit::Hearts)).unwrap();
+        tableau.cascades[0]
+            .push(Card::new(1, Suit::Spades))
+            .unwrap();
+
+        assert_eq!(
+            Ok(()),
+            tableau.action(Action {
+                from: Coordinate::Cell(0),
+                to: Coordinate::Cell(1),
+            }),
+        );
+
+        assert_eq!(
+            Ok(()),
+            tableau.action(Action {
+                from: Coordinate::Cascade(0),
+                to: Coordinate::Cell(2),
+            }),
+        );
+
+        assert!(tableau.cells[0].is_empty());
+        assert_eq!(0, tableau.cascades[0].len());
+        assert_eq!(Some(&Card::new(1, Suit::Hearts)), tableau.cells[1].peek());
+        assert_eq!(Some(&Card::new(1, Suit::Spades)), tableau.cells[2].peek());
+    }
+
+    #[test]
+    fn action_illegal() {
+        let mut tableau = Tableau::empty();
+        tableau.cascades[0].push_unchecked(Card::new(13, Suit::Hearts));
+        tableau.cells[0].push(Card::new(12, Suit::Hearts)).unwrap();
+        tableau.cells[1].push(Card::new(11, Suit::Hearts)).unwrap();
+
+        assert_eq!(
+            Err("That card cannot go on that cascade."),
+            tableau.action(Action {
+                from: Coordinate::Cell(0),
+                to: Coordinate::Cascade(0),
+            }),
+        );
+
+        assert_eq!(
+            Err("A card is already present on that cell."),
+            tableau.action(Action {
+                from: Coordinate::Cascade(0),
+                to: Coordinate::Cell(0),
+            }),
+        );
+
+        assert_eq!(
+            Err("That card is not valid on that foundation."),
+            tableau.action(Action {
+                from: Coordinate::Cell(1),
+                to: Coordinate::Foundation(0),
+            }),
+        );
+
+        assert_eq!(
+            Some(&Card::new(13, Suit::Hearts)),
+            tableau.cascades[0].cards().last(),
+        );
+
+        assert_eq!(Some(&Card::new(12, Suit::Hearts)), tableau.cells[0].peek());
+        assert_eq!(Some(&Card::new(11, Suit::Hearts)), tableau.cells[1].peek());
+    }
+
+    #[test]
+    fn action_illegal_from_foundation() {
+        let mut tableau = Tableau::empty();
+        tableau.foundations[0]
+            .push(Card::new(1, Suit::Hearts))
+            .unwrap();
+
+        assert_eq!(
+            Err("You cannot take a card from a foundation."),
+            tableau.action(Action {
+                from: Coordinate::Foundation(0),
+                to: Coordinate::Cell(0),
+            })
+        );
+
+        assert!(tableau.cells[0].is_empty());
+        assert_eq!(
+            Some(&Card::new(1, Suit::Hearts)),
+            tableau.foundations[0].peek(),
+        );
+    }
+
+    #[test]
+    fn action_illegal_empty() {
+        let mut tableau = Tableau::empty();
+
+        assert_eq!(
+            Err("That space is empty."),
+            tableau.action(Action {
+                from: Coordinate::Cell(0),
+                to: Coordinate::Cell(1)
+            }),
+        );
+
+        assert_eq!(
+            Err("That space is empty."),
+            tableau.action(Action {
+                from: Coordinate::Cascade(0),
+                to: Coordinate::Cell(2)
+            }),
+        );
     }
 }

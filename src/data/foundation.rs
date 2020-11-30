@@ -33,7 +33,7 @@ impl Foundation {
                 panic!("Could not modify foundation!");
             }
         } else {
-            Err((card, "That card is not valid on this foundation."))
+            Err((card, "That card is not valid on that foundation."))
         }
     }
 }
@@ -134,7 +134,7 @@ mod tests {
         assert_eq!(
             Err((
                 Card::new(2, Suit::Spades),
-                "That card is not valid on this foundation.",
+                "That card is not valid on that foundation.",
             )),
             foundation.push(card),
         );
@@ -170,7 +170,7 @@ mod tests {
         assert_eq!(
             Err((
                 Card::new(3, Suit::Clubs),
-                "That card is not valid on this foundation.",
+                "That card is not valid on that foundation.",
             )),
             foundation.push(card),
         );
@@ -187,7 +187,7 @@ mod tests {
         assert_eq!(
             Err((
                 Card::new(2, Suit::Hearts),
-                "That card is not valid on this foundation.",
+                "That card is not valid on that foundation.",
             )),
             foundation.push(card),
         );
