@@ -1,3 +1,4 @@
+#![cfg(feature = "gui")]
 use druid::{AppLauncher, WindowDesc};
 
 use refcell::data;

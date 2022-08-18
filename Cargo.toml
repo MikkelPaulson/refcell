@@ -4,7 +4,13 @@ version = "0.1.0"
 authors = ["Mikkel Paulson <git@email.mikkel.ca>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "gui"
+required-features = ["gui"]
+
+[features]
+default = []
+gui = []
 
 [dependencies]
 rand = "0.7.3"
@@ -12,3 +18,4 @@ rand = "0.7.3"
 [dependencies.druid]
 version = "0.6.0"
 features = ["svg"]
+optional = true

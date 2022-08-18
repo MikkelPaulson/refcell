@@ -1,7 +1,9 @@
-use druid::{Data, Lens};
 use std::convert::TryInto;
 use std::fmt;
 use std::iter;
+
+#[cfg(feature = "gui")]
+use druid::{Data, Lens};
 
 pub use action::{Action, Coordinate};
 pub use cascade::Cascade;
@@ -17,7 +19,8 @@ mod deck;
 mod foundation;
 mod single;
 
-#[derive(Clone, Data, Debug, Lens)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "gui", derive(Data, Lens))]
 pub struct Tableau {
     pub cells: [Cell; 4],
     pub foundations: [Foundation; 4],
@@ -88,6 +91,71 @@ impl Tableau {
 
 impl fmt::Display for Tableau {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // cells and foundations
+        {
+            writeln!(f, " A   B   C   D   W   X   Y   Z")?;
+            let top_row: Vec<String> = self
+                .cells
+                .iter()
+                .map(|cell| cell.peek())
+                .chain(self.foundations.iter().map(|foundation| foundation.peek()))
+                .map(|card| match card {
+                    Some(card) => card.to_string(),
+                    None => "\x1b[2;7m   \x1b[0m\n\x1b[2;7m   \x1b[0m".to_string(),
+                })
+                .collect();
+
+            top_row
+                .iter()
+                .try_for_each(|s| write!(f, "{} ", s.lines().next().unwrap()))?;
+            writeln!(f, "")?;
+
+            top_row
+                .iter()
+                .try_for_each(|s| write!(f, "{} ", s.lines().last().unwrap()))?;
+            writeln!(f, "")?;
+        }
+
+        writeln!(f, "")?;
+
+        // cascades
+        {
+            writeln!(f, " 1   2   3   4   5   6   7   8")?;
+
+            let longest_cascade = self
+                .cascades
+                .iter()
+                .map(|cascade| cascade.len())
+                .max()
+                .unwrap_or(0);
+
+            for row in 0..longest_cascade + 1 {
+                self.cascades.iter().try_for_each(|cascade| {
+                    cascade
+                        .cards()
+                        .get(row)
+                        .map(|card| write!(f, "{} ", card.to_string().lines().next().unwrap()))
+                        .or_else(|| {
+                            row.checked_sub(1)
+                                .and_then(|prev_row| cascade.cards().get(prev_row))
+                                .map(|card| {
+                                    write!(f, "{} ", card.to_string().lines().last().unwrap())
+                                })
+                        })
+                        .unwrap_or_else(|| write!(f, "    "))
+                })?;
+
+                writeln!(f, "")?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/*
+impl fmt::Display for Tableau {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "ａｂｃｄ  ｗｘｙｚ")?;
         self.cells
             .iter()
@@ -98,6 +166,12 @@ impl fmt::Display for Tableau {
             .try_for_each(|cell| write!(f, "{}", cell))?;
         write!(f, "\n\n")?;
         writeln!(f, " １２３４５６７８")?;
+
+        let foundation_suits: HashMap<Suit, u8> = self
+            .foundations
+            .iter()
+            .filter_map(|f| f.get_suit().map(|suit| (suit, f.get_rank())))
+            .collect();
 
         let longest_cascade = self
             .cascades
@@ -110,7 +184,17 @@ impl fmt::Display for Tableau {
             write!(f, " ")?;
             for cascade in self.cascades.iter() {
                 if let Some(card) = cascade.cards().get(row) {
-                    write!(f, "{}", card)?;
+                    if foundation_suits
+                        .get(&card.get_suit())
+                        .cloned()
+                        .unwrap_or_default()
+                        + 1
+                        == card.get_rank()
+                    {
+                        write!(f, "\x1b[7m{}", card)?;
+                    } else {
+                        write!(f, "{}", card)?;
+                    }
                 } else {
                     write!(f, "  ")?;
                 }
@@ -121,6 +205,7 @@ impl fmt::Display for Tableau {
         Ok(())
     }
 }
+*/
 
 #[cfg(test)]
 mod tests {
@@ -179,7 +264,7 @@ mod tests {
         let deck = Deck::new(cards);
         let tableau = Tableau::deal(deck);
 
-        assert!(tableau.is_won(), format!("{:?}", tableau));
+        assert!(tableau.is_won(), "{:?}", tableau);
 
         // Just to be sure: we have aces on top, right?
         assert_eq!(

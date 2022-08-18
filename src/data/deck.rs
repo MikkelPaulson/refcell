@@ -1,10 +1,11 @@
-use druid::Data;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use std::char;
 use std::fmt;
 use std::iter;
 use std::rc::Rc;
+
+#[cfg(feature = "gui")]
+use druid::Data;
 
 #[derive(Debug)]
 pub struct Deck(Rc<Vec<Card>>);
@@ -78,7 +79,8 @@ mod test_deck {
     }
 }
 
-#[derive(Clone, Data, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "gui", derive(Data))]
 pub struct Card(u8, Suit);
 
 impl Card {
@@ -103,6 +105,42 @@ impl fmt::Display for Card {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
+            "\
+\x1b[{color};7m{rank}{space}{suit}\x1b[0m
+\x1b[{color};7m{suit}{space}{rank}\x1b[0m",
+            color = if self.get_suit().is_red() { "91" } else { "39" },
+            rank = match self.get_rank() {
+                1 => "A",
+                2 => "2",
+                3 => "3",
+                4 => "4",
+                5 => "5",
+                6 => "6",
+                7 => "7",
+                8 => "8",
+                9 => "9",
+                10 => "10",
+                11 => "J",
+                12 => "Q",
+                13 => "K",
+                _ => unreachable!(),
+            },
+            space = if self.get_rank() == 10 { "" } else { " " },
+            suit = match self.get_suit() {
+                Suit::Spades => "\u{2660}",
+                Suit::Clubs => "\u{2663}",
+                Suit::Hearts => "\u{2665}",
+                Suit::Diamonds => "\u{2666}",
+            },
+        )
+    }
+}
+
+/*
+impl fmt::Display for Card {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
             "\x1b[{}m{}\x1b[0m ",
             if self.get_suit().is_red() { "91" } else { "39" },
             char::from_u32(
@@ -123,6 +161,7 @@ impl fmt::Display for Card {
         )
     }
 }
+*/
 
 #[cfg(test)]
 mod test_card {
@@ -156,7 +195,8 @@ mod test_card {
     }
 }
 
-#[derive(Clone, Copy, Data, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "gui", derive(Data))]
 pub enum Suit {
     Clubs,
     Diamonds,

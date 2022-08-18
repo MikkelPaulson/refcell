@@ -1,9 +1,12 @@
 use super::{Card, Single, Suit};
-use druid::Data;
 use std::fmt;
 use std::rc::Rc;
 
-#[derive(Clone, Data, Debug, PartialEq)]
+#[cfg(feature = "gui")]
+use druid::Data;
+
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "gui", derive(Data))]
 pub struct Foundation(Rc<Vec<Card>>);
 
 impl Foundation {

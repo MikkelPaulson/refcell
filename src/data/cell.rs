@@ -1,8 +1,11 @@
 use super::{Card, Single};
-use druid::{Data, Lens};
 use std::fmt;
 
-#[derive(Clone, Data, Debug, Lens, PartialEq)]
+#[cfg(feature = "gui")]
+use druid::{Data, Lens};
+
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "gui", derive(Data, Lens))]
 pub struct Cell {
     card: Option<Card>,
 }
