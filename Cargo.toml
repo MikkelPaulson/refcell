@@ -2,7 +2,7 @@
 name = "refcell"
 version = "0.1.0"
 authors = ["Mikkel Paulson <git@email.mikkel.ca>"]
-edition = "2018"
+edition = "2021"
 
 [[bin]]
 name = "gui"

@@ -19,10 +19,18 @@ impl Deck {
     pub fn fresh() -> Self {
         Self::new(
             iter::empty::<Card>()
-                .chain((0..13).map(|i| Card::new(i + 1, Suit::Spades)))
-                .chain((0..13).map(|i| Card::new(i + 1, Suit::Diamonds)))
-                .chain((0..13).map(|i| Card::new(13 - i, Suit::Clubs)))
-                .chain((0..13).map(|i| Card::new(13 - i, Suit::Hearts)))
+                .chain((1..=13).map(|i| Card::new(i.try_into().unwrap(), Suit::Spades)))
+                .chain((1..=13).map(|i| Card::new(i.try_into().unwrap(), Suit::Diamonds)))
+                .chain(
+                    (1..=13)
+                        .rev()
+                        .map(|i| Card::new(i.try_into().unwrap(), Suit::Clubs)),
+                )
+                .chain(
+                    (1..=13)
+                        .rev()
+                        .map(|i| Card::new(i.try_into().unwrap(), Suit::Hearts)),
+                )
                 .collect(),
         )
     }
@@ -52,16 +60,19 @@ mod test_deck {
         let mut deck = Deck::fresh();
 
         for i in 1..=13 {
-            assert_eq!(Some(Card(i, Suit::Hearts)), deck.pop());
+            assert_eq!(Some(Card(i.try_into().unwrap(), Suit::Hearts)), deck.pop());
         }
         for i in 1..=13 {
-            assert_eq!(Some(Card(i, Suit::Clubs)), deck.pop());
+            assert_eq!(Some(Card(i.try_into().unwrap(), Suit::Clubs)), deck.pop());
         }
         for i in (1..=13).rev() {
-            assert_eq!(Some(Card(i, Suit::Diamonds)), deck.pop());
+            assert_eq!(
+                Some(Card(i.try_into().unwrap(), Suit::Diamonds)),
+                deck.pop(),
+            );
         }
         for i in (1..=13).rev() {
-            assert_eq!(Some(Card(i, Suit::Spades)), deck.pop());
+            assert_eq!(Some(Card(i.try_into().unwrap(), Suit::Spades)), deck.pop());
         }
         assert_eq!(None, deck.pop());
     }
@@ -81,19 +92,15 @@ mod test_deck {
 
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "gui", derive(Data))]
-pub struct Card(u8, Suit);
+pub struct Card(Rank, Suit);
 
 impl Card {
-    pub fn new(rank: u8, suit: Suit) -> Self {
-        if rank >= 1 && rank <= 13 {
-            Self(rank, suit)
-        } else {
-            panic!("Invalid rank.")
-        }
+    pub fn new(rank: Rank, suit: Suit) -> Self {
+        Self(rank, suit)
     }
 
     pub fn get_rank(&self) -> u8 {
-        self.0
+        self.0.into()
     }
 
     pub fn get_suit(&self) -> Suit {
@@ -126,13 +133,55 @@ impl fmt::Display for Card {
                 _ => unreachable!(),
             },
             space = if self.get_rank() == 10 { "" } else { " " },
-            suit = match self.get_suit() {
-                Suit::Spades => "\u{2660}",
-                Suit::Clubs => "\u{2663}",
-                Suit::Hearts => "\u{2665}",
-                Suit::Diamonds => "\u{2666}",
-            },
+            suit = self.get_suit(),
         )
+    }
+}
+
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
+pub enum Rank {
+    Ace = 1,
+    Two = 2,
+    Three = 3,
+    Four = 4,
+    Five = 5,
+    Six = 6,
+    Seven = 7,
+    Eight = 8,
+    Nine = 9,
+    Ten = 10,
+    Jack = 11,
+    Queen = 12,
+    King = 13,
+}
+
+impl TryFrom<u8> for Rank {
+    type Error = ();
+
+    fn try_from(input: u8) -> Result<Self, Self::Error> {
+        Ok(match input {
+            1 => Self::Ace,
+            2 => Self::Two,
+            3 => Self::Three,
+            4 => Self::Four,
+            5 => Self::Five,
+            6 => Self::Six,
+            7 => Self::Seven,
+            8 => Self::Eight,
+            9 => Self::Nine,
+            10 => Self::Ten,
+            11 => Self::Jack,
+            12 => Self::Queen,
+            13 => Self::King,
+            _ => return Err(()),
+        })
+    }
+}
+
+impl From<Rank> for u8 {
+    fn from(input: Rank) -> Self {
+        input as Self
     }
 }
 
@@ -165,33 +214,21 @@ impl fmt::Display for Card {
 
 #[cfg(test)]
 mod test_card {
-    use super::{Card, Suit};
+    use super::{Card, Rank, Suit};
 
     #[test]
     fn new_valid() {
-        assert_eq!(Card(1, Suit::Spades), Card::new(1, Suit::Spades));
-        assert_eq!(Card(2, Suit::Hearts), Card::new(2, Suit::Hearts));
-        assert_eq!(Card(12, Suit::Diamonds), Card::new(12, Suit::Diamonds));
-        assert_eq!(Card(13, Suit::Clubs), Card::new(13, Suit::Clubs));
+        assert_eq!(
+            Card(Rank::Ace, Suit::Spades),
+            Card::new(Rank::Ace, Suit::Spades),
+        );
     }
 
     #[test]
     fn eq() {
-        assert_eq!(Card(1, Suit::Hearts), Card(1, Suit::Hearts));
-        assert_ne!(Card(2, Suit::Hearts), Card(1, Suit::Hearts));
-        assert_ne!(Card(1, Suit::Spades), Card(1, Suit::Hearts));
-    }
-
-    #[test]
-    #[should_panic(expected = "Invalid rank.")]
-    fn new_too_small() {
-        Card::new(0, Suit::Spades);
-    }
-
-    #[test]
-    #[should_panic(expected = "Invalid rank.")]
-    fn new_too_big() {
-        Card::new(14, Suit::Clubs);
+        assert_eq!(Card(Rank::Ace, Suit::Hearts), Card(Rank::Ace, Suit::Hearts));
+        assert_ne!(Card(Rank::Two, Suit::Hearts), Card(Rank::Ace, Suit::Hearts));
+        assert_ne!(Card(Rank::Ace, Suit::Spades), Card(Rank::Ace, Suit::Hearts));
     }
 }
 
@@ -209,6 +246,17 @@ impl Suit {
         match self {
             Self::Diamonds | Self::Hearts => true,
             Self::Clubs | Self::Spades => false,
+        }
+    }
+}
+
+impl fmt::Display for Suit {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match self {
+            Self::Spades => write!(f, "\u{2660}"),
+            Self::Clubs => write!(f, "\u{2663}"),
+            Self::Hearts => write!(f, "\u{2665}"),
+            Self::Diamonds => write!(f, "\u{2666}"),
         }
     }
 }

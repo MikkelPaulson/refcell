@@ -55,7 +55,7 @@ impl fmt::Display for Cell {
 
 #[cfg(test)]
 mod tests {
-    use super::super::Suit;
+    use super::super::{Rank, Suit};
     use super::{Card, Cell, Single};
 
     #[test]
@@ -119,6 +119,6 @@ mod tests {
     }
 
     fn card() -> Card {
-        Card::new(1, Suit::Hearts)
+        Card::new(Rank::Ace, Suit::Hearts)
     }
 }

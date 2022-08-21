@@ -8,7 +8,7 @@ use druid::{Data, Lens};
 pub use action::{Action, Coordinate};
 pub use cascade::Cascade;
 pub use cell::Cell;
-pub use deck::{Card, Deck, Suit};
+pub use deck::{Card, Deck, Rank, Suit};
 pub use foundation::Foundation;
 pub use single::Single;
 
@@ -209,7 +209,7 @@ impl fmt::Display for Tableau {
 
 #[cfg(test)]
 mod tests {
-    use super::{Action, Card, Cell, Coordinate, Deck, Foundation, Single, Suit, Tableau};
+    use super::{Action, Card, Cell, Coordinate, Deck, Foundation, Rank, Single, Suit, Tableau};
 
     #[test]
     fn deal() {
@@ -250,7 +250,7 @@ mod tests {
 
         for i in 0..52 {
             cards.push(Card::new(
-                (i / 4) + 1,
+                ((i / 4) + 1).try_into().unwrap(),
                 match i % 4 {
                     0 => Suit::Spades,
                     1 => Suit::Diamonds,
@@ -268,7 +268,7 @@ mod tests {
 
         // Just to be sure: we have aces on top, right?
         assert_eq!(
-            Some(&Card::new(1, Suit::Clubs)),
+            Some(&Card::new(Rank::Ace, Suit::Clubs)),
             tableau.cascades[0].cards().last(),
         );
     }
@@ -281,8 +281,12 @@ mod tests {
     #[test]
     fn action_legal_to_foundation() {
         let mut tableau = Tableau::empty();
-        tableau.cells[0].push(Card::new(1, Suit::Clubs)).unwrap();
-        tableau.cascades[0].push(Card::new(2, Suit::Clubs)).unwrap();
+        tableau.cells[0]
+            .push(Card::new(Rank::Ace, Suit::Clubs))
+            .unwrap();
+        tableau.cascades[0]
+            .push(Card::new(Rank::Two, Suit::Clubs))
+            .unwrap();
 
         assert_eq!(
             Ok(()),
@@ -302,7 +306,7 @@ mod tests {
         assert!(tableau.cells[0].is_empty());
         assert_eq!(0, tableau.cascades[0].len());
         assert_eq!(
-            Some(&Card::new(2, Suit::Clubs)),
+            Some(&Card::new(Rank::Two, Suit::Clubs)),
             tableau.foundations[0].peek(),
         );
     }
@@ -310,9 +314,11 @@ mod tests {
     #[test]
     fn action_legal_to_cascade() {
         let mut tableau = Tableau::empty();
-        tableau.cells[0].push(Card::new(13, Suit::Clubs)).unwrap();
+        tableau.cells[0]
+            .push(Card::new(Rank::King, Suit::Clubs))
+            .unwrap();
         tableau.cascades[0]
-            .push(Card::new(12, Suit::Hearts))
+            .push(Card::new(Rank::Queen, Suit::Hearts))
             .unwrap();
 
         assert_eq!(
@@ -339,9 +345,11 @@ mod tests {
     #[test]
     fn action_legal_to_cell() {
         let mut tableau = Tableau::empty();
-        tableau.cells[0].push(Card::new(1, Suit::Hearts)).unwrap();
+        tableau.cells[0]
+            .push(Card::new(Rank::Ace, Suit::Hearts))
+            .unwrap();
         tableau.cascades[0]
-            .push(Card::new(1, Suit::Spades))
+            .push(Card::new(Rank::Ace, Suit::Spades))
             .unwrap();
 
         assert_eq!(
@@ -362,16 +370,26 @@ mod tests {
 
         assert!(tableau.cells[0].is_empty());
         assert_eq!(0, tableau.cascades[0].len());
-        assert_eq!(Some(&Card::new(1, Suit::Hearts)), tableau.cells[1].peek());
-        assert_eq!(Some(&Card::new(1, Suit::Spades)), tableau.cells[2].peek());
+        assert_eq!(
+            Some(&Card::new(Rank::Ace, Suit::Hearts)),
+            tableau.cells[1].peek()
+        );
+        assert_eq!(
+            Some(&Card::new(Rank::Ace, Suit::Spades)),
+            tableau.cells[2].peek()
+        );
     }
 
     #[test]
     fn action_illegal() {
         let mut tableau = Tableau::empty();
-        tableau.cascades[0].push_unchecked(Card::new(13, Suit::Hearts));
-        tableau.cells[0].push(Card::new(12, Suit::Hearts)).unwrap();
-        tableau.cells[1].push(Card::new(11, Suit::Hearts)).unwrap();
+        tableau.cascades[0].push_unchecked(Card::new(Rank::King, Suit::Hearts));
+        tableau.cells[0]
+            .push(Card::new(Rank::Queen, Suit::Hearts))
+            .unwrap();
+        tableau.cells[1]
+            .push(Card::new(Rank::Jack, Suit::Hearts))
+            .unwrap();
 
         assert_eq!(
             Err("That card cannot go on that cascade."),
@@ -398,19 +416,25 @@ mod tests {
         );
 
         assert_eq!(
-            Some(&Card::new(13, Suit::Hearts)),
+            Some(&Card::new(Rank::King, Suit::Hearts)),
             tableau.cascades[0].cards().last(),
         );
 
-        assert_eq!(Some(&Card::new(12, Suit::Hearts)), tableau.cells[0].peek());
-        assert_eq!(Some(&Card::new(11, Suit::Hearts)), tableau.cells[1].peek());
+        assert_eq!(
+            Some(&Card::new(Rank::Queen, Suit::Hearts)),
+            tableau.cells[0].peek()
+        );
+        assert_eq!(
+            Some(&Card::new(Rank::Jack, Suit::Hearts)),
+            tableau.cells[1].peek()
+        );
     }
 
     #[test]
     fn action_illegal_from_foundation() {
         let mut tableau = Tableau::empty();
         tableau.foundations[0]
-            .push(Card::new(1, Suit::Hearts))
+            .push(Card::new(Rank::Ace, Suit::Hearts))
             .unwrap();
 
         assert_eq!(
@@ -423,7 +447,7 @@ mod tests {
 
         assert!(tableau.cells[0].is_empty());
         assert_eq!(
-            Some(&Card::new(1, Suit::Hearts)),
+            Some(&Card::new(Rank::Ace, Suit::Hearts)),
             tableau.foundations[0].peek(),
         );
     }
