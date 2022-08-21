@@ -52,7 +52,7 @@ impl Cascade {
     pub fn is_sequential(&self) -> bool {
         self.0
             .iter()
-            .try_fold(13, |prev, card| {
+            .try_fold(Rank::King, |prev, card| {
                 if card.get_rank() > prev {
                     Err(())
                 } else {

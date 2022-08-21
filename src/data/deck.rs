@@ -2,6 +2,7 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::fmt;
 use std::iter;
+use std::ops::{Add, Sub};
 use std::rc::Rc;
 
 #[cfg(feature = "gui")]
@@ -99,8 +100,8 @@ impl Card {
         Self(rank, suit)
     }
 
-    pub fn get_rank(&self) -> u8 {
-        self.0.into()
+    pub fn get_rank(&self) -> Rank {
+        self.0
     }
 
     pub fn get_suit(&self) -> Suit {
@@ -116,23 +117,12 @@ impl fmt::Display for Card {
 \x1b[{color};7m{rank}{space}{suit}\x1b[0m
 \x1b[{color};7m{suit}{space}{rank}\x1b[0m",
             color = if self.get_suit().is_red() { "91" } else { "39" },
-            rank = match self.get_rank() {
-                1 => "A",
-                2 => "2",
-                3 => "3",
-                4 => "4",
-                5 => "5",
-                6 => "6",
-                7 => "7",
-                8 => "8",
-                9 => "9",
-                10 => "10",
-                11 => "J",
-                12 => "Q",
-                13 => "K",
-                _ => unreachable!(),
+            rank = self.get_rank(),
+            space = if self.get_rank() == Rank::Ten {
+                ""
+            } else {
+                " "
             },
-            space = if self.get_rank() == 10 { "" } else { " " },
             suit = self.get_suit(),
         )
     }
@@ -154,6 +144,26 @@ pub enum Rank {
     Jack = 11,
     Queen = 12,
     King = 13,
+}
+
+impl fmt::Display for Rank {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match self {
+            Self::Ace => write!(f, "A"),
+            Self::Two => write!(f, "2"),
+            Self::Three => write!(f, "3"),
+            Self::Four => write!(f, "4"),
+            Self::Five => write!(f, "5"),
+            Self::Six => write!(f, "6"),
+            Self::Seven => write!(f, "7"),
+            Self::Eight => write!(f, "8"),
+            Self::Nine => write!(f, "9"),
+            Self::Ten => write!(f, "10"),
+            Self::Jack => write!(f, "J"),
+            Self::Queen => write!(f, "Q"),
+            Self::King => write!(f, "K"),
+        }
+    }
 }
 
 impl TryFrom<u8> for Rank {
@@ -182,6 +192,22 @@ impl TryFrom<u8> for Rank {
 impl From<Rank> for u8 {
     fn from(input: Rank) -> Self {
         input as Self
+    }
+}
+
+impl Add<u8> for Rank {
+    type Output = Self;
+
+    fn add(self, rhs: u8) -> Self::Output {
+        (self as u8 + rhs).try_into().unwrap()
+    }
+}
+
+impl Sub<u8> for Rank {
+    type Output = Self;
+
+    fn sub(self, rhs: u8) -> Self::Output {
+        (self as u8 - rhs).try_into().unwrap()
     }
 }
 

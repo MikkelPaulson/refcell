@@ -18,13 +18,19 @@ impl Foundation {
         self.peek().map(|card| card.get_suit())
     }
 
-    pub fn get_rank(&self) -> u8 {
-        self.peek().map(|card| card.get_rank()).unwrap_or(0)
+    pub fn get_rank(&self) -> Option<Rank> {
+        self.peek().map(|card| card.get_rank())
     }
 
     pub fn is_legal(&self, card: &Card) -> bool {
-        (self.get_suit() == None || self.get_suit() == Some(card.get_suit()))
-            && self.get_rank() + 1 == card.get_rank()
+        if card.get_rank() == Rank::Ace {
+            self.is_empty()
+        } else {
+            self.peek().map_or(false, |foundation_card| {
+                card.get_suit() == foundation_card.get_suit()
+                    && card.get_rank() - 1 == foundation_card.get_rank()
+            })
+        }
     }
 
     pub fn push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
@@ -83,9 +89,9 @@ mod tests {
 
     #[test]
     fn get_rank() {
-        assert_eq!(0, make_foundation(Vec::new()).get_rank());
+        assert_eq!(None, make_foundation(Vec::new()).get_rank());
         assert_eq!(
-            2,
+            Some(Rank::Two),
             make_foundation(vec![
                 Card::new(Rank::Ace, Suit::Clubs),
                 Card::new(Rank::Two, Suit::Clubs)

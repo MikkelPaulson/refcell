@@ -11,7 +11,7 @@ fn main() -> io::Result<()> {
 
     let mut terminal =
         input::MouseTerminal::from(screen::AlternateScreen::from(io::stdout().into_raw_mode()?));
-    let card = Card::new(4, Suit::Clubs);
+    let card = Card::new(Rank::Four, Suit::Clubs);
 
     render_card(&mut terminal, &card, 3)?;
 
