@@ -8,9 +8,15 @@ edition = "2021"
 name = "gui"
 required-features = ["gui"]
 
+[[bin]]
+name = "tui"
+required-features = ["tui"]
+
 [features]
 default = []
-gui = []
+gui = ["dep:druid"]
+#tui = ["dep:termion"]
+tui = []
 
 [dependencies]
 rand = "0.7.3"
@@ -19,3 +25,7 @@ rand = "0.7.3"
 version = "0.6.0"
 features = ["svg"]
 optional = true
+
+[dependencies.termion]
+version = "1.5.0"
+#optional = true
