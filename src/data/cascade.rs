@@ -27,6 +27,7 @@ impl Cascade {
             None => true,
             Some(last_card) => {
                 card.get_suit().is_red() != last_card.get_suit().is_red()
+                    && last_card.get_rank() != Rank::Ace
                     && card.get_rank() == last_card.get_rank() - 1
             }
         }
