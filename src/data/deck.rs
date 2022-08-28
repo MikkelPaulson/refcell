@@ -91,7 +91,7 @@ mod test_deck {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "gui", derive(Data))]
 pub struct Card(Rank, Suit);
 
@@ -146,23 +146,29 @@ pub enum Rank {
     King = 13,
 }
 
+impl Rank {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Ace => "A",
+            Self::Two => "2",
+            Self::Three => "3",
+            Self::Four => "4",
+            Self::Five => "5",
+            Self::Six => "6",
+            Self::Seven => "7",
+            Self::Eight => "8",
+            Self::Nine => "9",
+            Self::Ten => "10",
+            Self::Jack => "J",
+            Self::Queen => "Q",
+            Self::King => "K",
+        }
+    }
+}
+
 impl fmt::Display for Rank {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match self {
-            Self::Ace => write!(f, "A"),
-            Self::Two => write!(f, "2"),
-            Self::Three => write!(f, "3"),
-            Self::Four => write!(f, "4"),
-            Self::Five => write!(f, "5"),
-            Self::Six => write!(f, "6"),
-            Self::Seven => write!(f, "7"),
-            Self::Eight => write!(f, "8"),
-            Self::Nine => write!(f, "9"),
-            Self::Ten => write!(f, "10"),
-            Self::Jack => write!(f, "J"),
-            Self::Queen => write!(f, "Q"),
-            Self::King => write!(f, "K"),
-        }
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -274,16 +280,20 @@ impl Suit {
             Self::Clubs | Self::Spades => false,
         }
     }
+
+    pub fn as_char(&self) -> char {
+        match self {
+            Self::Spades => '\u{2660}',
+            Self::Clubs => '\u{2663}',
+            Self::Hearts => '\u{2665}',
+            Self::Diamonds => '\u{2666}',
+        }
+    }
 }
 
 impl fmt::Display for Suit {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match self {
-            Self::Spades => write!(f, "\u{2660}"),
-            Self::Clubs => write!(f, "\u{2663}"),
-            Self::Hearts => write!(f, "\u{2665}"),
-            Self::Diamonds => write!(f, "\u{2666}"),
-        }
+        write!(f, "{}", self.as_char())
     }
 }
 
