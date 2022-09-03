@@ -9,65 +9,23 @@ use termion::raw::IntoRawMode;
 use termion::{cursor, input, screen};
 
 fn main() -> io::Result<()> {
-    //let mut tableau = Tableau::deal(Deck::shuffled());
+    let mut tableau = Tableau::deal(Deck::shuffled());
 
+    let _hide_cursor = termion::cursor::HideCursor::from(io::stdout());
     let mut terminal =
         input::MouseTerminal::from(screen::AlternateScreen::from(io::stdout().into_raw_mode()?));
+    write!(terminal, "{}", termion::clear::All)?;
 
-    for i in 0..=3 {
-        let card = Rank::try_from(i)
-            .ok()
-            .map(|rank| Card::new(rank, Suit::Hearts));
-        write!(terminal, "{}", termion::clear::All)?;
+    let scale = UiScale::from_terminal_size(termion::terminal_size()?);
 
-        {
-            let mut col = 1;
-            for (width, height) in [(3, 2), (5, 3), (7, 5), (9, 7)] {
-                render_card(&mut terminal, card.as_ref(), col, 1, width, height)?;
-                col += width + 1;
-            }
-        }
-
-        {
-            let mut col = 1;
-            for width in 3..11 {
-                let mut row = 10;
-                for height in 2..9 {
-                    render_card(&mut terminal, card.as_ref(), col, row, width, height)?;
-                    row += height + 1;
-                }
-                col += width + 1;
-            }
-        }
-
-        terminal.flush()?;
-        sleep(Duration::from_secs(1));
-    }
-
-    /*
-    writeln!(terminal, "{}", tableau).unwrap();
-
-    while !tableau.is_won() {
-        let mut buffer = String::new();
-        stdin().read_line(&mut buffer).expect("I/O error");
-
-        match buffer.parse::<Action>() {
-            Ok(action) => {
-                if let Err(msg) = tableau.action(action) {
-                    writeln!(terminal, "{}", msg).unwrap();
-                }
-            }
-            Err(msg) => writeln!(terminal, "{}", msg).unwrap(),
-        }
-        writeln!(terminal, "{}", tableau).unwrap();
-    }
-
-    writeln!(terminal, "You win!").unwrap();
-    */
+    render_tableau(&mut terminal, &tableau, scale)?;
+    terminal.flush()?;
+    sleep(Duration::from_secs(10));
 
     Ok(())
 }
 
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 enum UiScale {
     Tiny,
     Small,
@@ -76,7 +34,42 @@ enum UiScale {
 }
 
 impl UiScale {
-    //fn from_terminal_size(size: (u16, u16)) -> Self {}
+    fn from_terminal_size(size: (u16, u16)) -> Self {
+        let scales = [
+            UiScale::Large,
+            UiScale::Medium,
+            UiScale::Small,
+            UiScale::Tiny,
+        ];
+
+        let scale_x = scales
+            .iter()
+            .find(|scale| size.0 >= scale.get_card_size().0 * 8 + 7)
+            .unwrap_or(&UiScale::Tiny);
+
+        let scale_y = scales
+            .iter()
+            .find(|scale| size.1 >= scale.get_card_size().1 * 2 + 10)
+            .unwrap_or(&UiScale::Tiny);
+
+        *scale_x.min(scale_y)
+    }
+
+    fn get_column_spacing(&self) -> u16 {
+        self.get_card_width() + if self == &UiScale::Large { 2 } else { 1 }
+    }
+
+    fn get_row_spacing(&self) -> u16 {
+        self.get_card_height() + 1
+    }
+
+    fn get_card_width(&self) -> u16 {
+        self.get_card_size().0
+    }
+
+    fn get_card_height(&self) -> u16 {
+        self.get_card_size().1
+    }
 
     fn get_card_size(&self) -> (u16, u16) {
         match self {
@@ -89,14 +82,14 @@ impl UiScale {
 }
 
 struct CardView {
-    size: (u16, u16),
+    scale: UiScale,
     card: Option<Card>,
 }
 
 impl CardView {
-    fn new(card: Option<&Card>, size: (u16, u16)) -> Self {
+    fn new(card: Option<&Card>, scale: UiScale) -> Self {
         Self {
-            size,
+            scale,
             card: card.cloned(),
         }
     }
@@ -117,7 +110,7 @@ impl CardView {
                 }
             }
         } else {
-            let (width, height) = self.size;
+            let (width, height) = self.scale.get_card_size();
 
             match pos {
                 (0, 0) => '┏',
@@ -137,7 +130,7 @@ impl CardView {
         } else {
             return CardChar::Blank;
         };
-        let (width, height) = self.size;
+        let (width, height) = self.scale.get_card_size();
 
         match pos {
             (0, 0) => CardChar::NumberLeft,
@@ -229,7 +222,7 @@ impl CardView {
             ""
         }
         .chars()
-        .chain((0..self.size.0).map(|col| self.char_at((col, row))))
+        .chain((0..self.scale.get_card_size().0).map(|col| self.char_at((col, row))))
         .chain("\x1b[0m".chars())
         .collect()
     }
@@ -245,17 +238,48 @@ enum CardChar {
     Blank,
 }
 
+fn render_tableau(terminal: &mut impl Write, tableau: &Tableau, scale: UiScale) -> io::Result<()> {
+    tableau
+        .cells
+        .iter()
+        .map(|c| c.peek())
+        .chain(tableau.foundations.iter().map(|f| f.peek()))
+        .enumerate()
+        .try_for_each(|(col, card)| {
+            render_card(
+                terminal,
+                card,
+                col as u16 * scale.get_column_spacing() + 1,
+                1,
+                scale,
+            )
+        })?;
+
+    for (col, cascade) in tableau.cascades.iter().enumerate() {
+        for (row, card) in cascade.cards().iter().enumerate() {
+            render_card(
+                terminal,
+                Some(card),
+                col as u16 * scale.get_column_spacing() + 1,
+                row as u16 + scale.get_row_spacing(),
+                scale,
+            );
+        }
+    }
+
+    Ok(())
+}
+
 fn render_card(
     terminal: &mut impl Write,
     card: Option<&Card>,
     col: u16,
     row: u16,
-    width: u16,
-    height: u16,
+    scale: UiScale,
 ) -> io::Result<()> {
-    let card_view = CardView::new(card, (width, height));
+    let card_view = CardView::new(card, scale);
 
-    (0..height).try_for_each(|i| {
+    (0..scale.get_card_height()).try_for_each(|i| {
         write!(
             terminal,
             "{goto}{line}",
