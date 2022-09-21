@@ -5,7 +5,7 @@ use std::iter;
 #[cfg(feature = "gui")]
 use druid::{Data, Lens};
 
-pub use action::{Action, Coordinate};
+pub use action::{Action, FromCoordinate, ToCoordinate};
 pub use cascade::Cascade;
 pub use cell::Cell;
 pub use deck::{Card, Deck, Rank, Suit};
@@ -60,19 +60,17 @@ impl Tableau {
 
     pub fn action(&mut self, action: Action) -> Result<(), &'static str> {
         if let Some(card) = match action.from {
-            Coordinate::Cascade(n) => self.cascades[n as usize].pop(),
-            Coordinate::Cell(n) => self.cells[n as usize].take(),
-            Coordinate::Foundation(_) => return Err("You cannot take a card from a foundation."),
+            FromCoordinate::Cascade(n) => self.cascades[n as usize].pop(),
+            FromCoordinate::Cell(n) => self.cells[n as usize].take(),
         } {
             if let Err((card, message)) = match action.to {
-                Coordinate::Cascade(n) => self.cascades[n as usize].try_push(card),
-                Coordinate::Cell(n) => self.cells[n as usize].try_push(card),
-                Coordinate::Foundation(n) => self.foundations[n as usize].try_push(card),
+                ToCoordinate::Cascade(n) => self.cascades[n as usize].try_push(card),
+                ToCoordinate::Cell(n) => self.cells[n as usize].try_push(card),
+                ToCoordinate::Foundation(n) => self.foundations[n as usize].try_push(card),
             } {
                 match action.from {
-                    Coordinate::Cascade(n) => self.cascades[n as usize].push(card),
-                    Coordinate::Cell(n) => self.cells[n as usize].try_push(card).unwrap(),
-                    Coordinate::Foundation(_) => unreachable!(),
+                    FromCoordinate::Cascade(n) => self.cascades[n as usize].push(card),
+                    FromCoordinate::Cell(n) => self.cells[n as usize].try_push(card).unwrap(),
                 }
 
                 Err(message)
@@ -209,7 +207,10 @@ impl fmt::Display for Tableau {
 
 #[cfg(test)]
 mod tests {
-    use super::{Action, Card, Cell, Coordinate, Deck, Foundation, Rank, Single, Suit, Tableau};
+    use super::{
+        Action, Card, Cell, Deck, Foundation, FromCoordinate, Rank, Single, Suit, Tableau,
+        ToCoordinate,
+    };
 
     #[test]
     fn deal() {
@@ -291,15 +292,15 @@ mod tests {
         assert_eq!(
             Ok(()),
             tableau.action(Action {
-                from: Coordinate::Cell(0),
-                to: Coordinate::Foundation(0),
+                from: FromCoordinate::Cell(0),
+                to: ToCoordinate::Foundation(0),
             }),
         );
         assert_eq!(
             Ok(()),
             tableau.action(Action {
-                from: Coordinate::Cascade(0),
-                to: Coordinate::Foundation(0),
+                from: FromCoordinate::Cascade(0),
+                to: ToCoordinate::Foundation(0),
             }),
         );
 
@@ -324,16 +325,16 @@ mod tests {
         assert_eq!(
             Ok(()),
             tableau.action(Action {
-                from: Coordinate::Cell(0),
-                to: Coordinate::Cascade(1),
+                from: FromCoordinate::Cell(0),
+                to: ToCoordinate::Cascade(1),
             }),
         );
 
         assert_eq!(
             Ok(()),
             tableau.action(Action {
-                from: Coordinate::Cascade(0),
-                to: Coordinate::Cascade(1),
+                from: FromCoordinate::Cascade(0),
+                to: ToCoordinate::Cascade(1),
             }),
         );
 
@@ -355,16 +356,16 @@ mod tests {
         assert_eq!(
             Ok(()),
             tableau.action(Action {
-                from: Coordinate::Cell(0),
-                to: Coordinate::Cell(1),
+                from: FromCoordinate::Cell(0),
+                to: ToCoordinate::Cell(1),
             }),
         );
 
         assert_eq!(
             Ok(()),
             tableau.action(Action {
-                from: Coordinate::Cascade(0),
-                to: Coordinate::Cell(2),
+                from: FromCoordinate::Cascade(0),
+                to: ToCoordinate::Cell(2),
             }),
         );
 
@@ -383,7 +384,7 @@ mod tests {
     #[test]
     fn action_illegal() {
         let mut tableau = Tableau::empty();
-        tableau.cascades[0].try_push(Card::new(Rank::King, Suit::Hearts));
+        tableau.cascades[0].push(Card::new(Rank::King, Suit::Hearts));
         tableau.cells[0]
             .try_push(Card::new(Rank::Queen, Suit::Hearts))
             .unwrap();
@@ -394,24 +395,24 @@ mod tests {
         assert_eq!(
             Err("That card cannot go on that cascade."),
             tableau.action(Action {
-                from: Coordinate::Cell(0),
-                to: Coordinate::Cascade(0),
+                from: FromCoordinate::Cell(0),
+                to: ToCoordinate::Cascade(0),
             }),
         );
 
         assert_eq!(
             Err("A card is already present on that cell."),
             tableau.action(Action {
-                from: Coordinate::Cascade(0),
-                to: Coordinate::Cell(0),
+                from: FromCoordinate::Cascade(0),
+                to: ToCoordinate::Cell(0),
             }),
         );
 
         assert_eq!(
             Err("That card is not valid on that foundation."),
             tableau.action(Action {
-                from: Coordinate::Cell(1),
-                to: Coordinate::Foundation(0),
+                from: FromCoordinate::Cell(1),
+                to: ToCoordinate::Foundation(0),
             }),
         );
 
@@ -431,44 +432,22 @@ mod tests {
     }
 
     #[test]
-    fn action_illegal_from_foundation() {
-        let mut tableau = Tableau::empty();
-        tableau.foundations[0]
-            .try_push(Card::new(Rank::Ace, Suit::Hearts))
-            .unwrap();
-
-        assert_eq!(
-            Err("You cannot take a card from a foundation."),
-            tableau.action(Action {
-                from: Coordinate::Foundation(0),
-                to: Coordinate::Cell(0),
-            })
-        );
-
-        assert!(tableau.cells[0].is_empty());
-        assert_eq!(
-            Some(&Card::new(Rank::Ace, Suit::Hearts)),
-            tableau.foundations[0].peek(),
-        );
-    }
-
-    #[test]
     fn action_illegal_empty() {
         let mut tableau = Tableau::empty();
 
         assert_eq!(
             Err("That space is empty."),
             tableau.action(Action {
-                from: Coordinate::Cell(0),
-                to: Coordinate::Cell(1)
+                from: FromCoordinate::Cell(0),
+                to: ToCoordinate::Cell(1)
             }),
         );
 
         assert_eq!(
             Err("That space is empty."),
             tableau.action(Action {
-                from: Coordinate::Cascade(0),
-                to: Coordinate::Cell(2)
+                from: FromCoordinate::Cascade(0),
+                to: ToCoordinate::Cell(2)
             }),
         );
     }
