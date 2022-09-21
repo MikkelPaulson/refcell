@@ -55,26 +55,74 @@ impl Tableau {
     }
 
     pub fn action(&mut self, action: Action) -> Result<(), &'static str> {
-        if let Some(card) = match action.from {
+        if let Action {
+            from: FromCoordinate::Cascade(n_from),
+            to: ToCoordinate::Cascade(n_to),
+        } = action
+        {
+            let (n_from, n_to) = (n_from as usize, n_to as usize);
+            let (from, to) = (&self.cascades[n_from], &self.cascades[n_to]);
+
+            if from.is_empty() {
+                return Err("That space is empty.");
+            }
+
+            if let Some(expected_rank) = to
+                .cards()
+                .last()
+                .and_then(|card| card.get_rank().try_decrement())
+            {
+                let max_stack_size = {
+                    let num_empty_cascades = self
+                        .cascades
+                        .iter()
+                        .enumerate()
+                        .filter(|(i, c)| ![n_from, n_to].contains(i) && c.is_empty())
+                        .count();
+
+                    let num_empty_cells = self.cells.iter().filter(|cell| cell.is_empty()).count();
+
+                    ((num_empty_cells + 1) * (num_empty_cascades + 1)).min(from.len())
+                };
+
+                for i in 1..=max_stack_size {
+                    if from.cards()[from.len() - i].get_rank() == expected_rank {
+                        if let Some(stack) = self.cascades[n_from].try_pop_stack(i) {
+                            return if let Err((stack, message)) =
+                                self.cascades[n_to].try_push_stack(stack)
+                            {
+                                self.cascades[n_from].push_stack(stack);
+                                Err(message)
+                            } else {
+                                Ok(())
+                            };
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        let card = match action.from {
             FromCoordinate::Cascade(n) => self.cascades[n as usize].pop(),
             FromCoordinate::Cell(n) => self.cells[n as usize].take(),
-        } {
-            if let Err((card, message)) = match action.to {
-                ToCoordinate::Cascade(n) => self.cascades[n as usize].try_push(card),
-                ToCoordinate::Cell(n) => self.cells[n as usize].try_push(card),
-                ToCoordinate::Foundation(n) => self.foundations[n as usize].try_push(card),
-            } {
-                match action.from {
-                    FromCoordinate::Cascade(n) => self.cascades[n as usize].push(card),
-                    FromCoordinate::Cell(n) => self.cells[n as usize].try_push(card).unwrap(),
-                }
+        }
+        .ok_or("That space is empty.")?;
 
-                Err(message)
-            } else {
-                Ok(())
+        if let Err((card, message)) = match action.to {
+            ToCoordinate::Cascade(n) => self.cascades[n as usize].try_push(card),
+            ToCoordinate::Cell(n) => self.cells[n as usize].try_push(card),
+            ToCoordinate::Foundation(n) => self.foundations[n as usize].try_push(card),
+        } {
+            match action.from {
+                FromCoordinate::Cascade(n) => self.cascades[n as usize].push(card),
+                FromCoordinate::Cell(n) => self.cells[n as usize].try_push(card).unwrap(),
             }
+
+            Err(message)
         } else {
-            Err("That space is empty.")
+            Ok(())
         }
     }
 
@@ -102,15 +150,15 @@ impl fmt::Display for Tableau {
             top_row
                 .iter()
                 .try_for_each(|s| write!(f, "{} ", s.lines().next().unwrap()))?;
-            writeln!(f, "")?;
+            writeln!(f)?;
 
             top_row
                 .iter()
                 .try_for_each(|s| write!(f, "{} ", s.lines().last().unwrap()))?;
-            writeln!(f, "")?;
+            writeln!(f)?;
         }
 
-        writeln!(f, "")?;
+        writeln!(f)?;
 
         // cascades
         {
@@ -139,7 +187,7 @@ impl fmt::Display for Tableau {
                         .unwrap_or_else(|| write!(f, "    "))
                 })?;
 
-                writeln!(f, "")?;
+                writeln!(f)?;
             }
         }
 

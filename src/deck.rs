@@ -101,6 +101,11 @@ impl Card {
     pub fn get_suit(&self) -> Suit {
         self.1
     }
+
+    pub fn is_legal(&self, other: &Card) -> bool {
+        self.get_suit().is_red() != other.get_suit().is_red()
+            && self.get_rank().try_decrement() == Some(other.get_rank())
+    }
 }
 
 impl fmt::Display for Card {

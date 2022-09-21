@@ -17,18 +17,44 @@ impl Cascade {
         self.0.pop()
     }
 
-    pub fn is_legal(&self, card: &Card) -> bool {
-        match self.0.last() {
-            None => true,
-            Some(last_card) => {
-                card.get_suit().is_red() != last_card.get_suit().is_red()
-                    && last_card.get_rank().try_decrement() == Some(card.get_rank())
+    pub fn try_pop_stack(&mut self, count: usize) -> Option<Vec<Card>> {
+        match count {
+            0 => Some(Vec::new()),
+            1 => self.pop().map(|card| vec![card]),
+            c if c > self.len() => None,
+            _ => {
+                let mut card_iter = self.0[self.0.len() - count..].iter();
+                let mut prev_card = card_iter.next().unwrap();
+
+                while let Some(card) = card_iter.next() {
+                    if !prev_card.is_legal(card) {
+                        return None;
+                    }
+
+                    prev_card = card;
+                }
+
+                Some(self.pop_stack(count))
             }
         }
     }
 
+    pub fn pop_stack(&mut self, count: usize) -> Vec<Card> {
+        self.0.split_off(self.0.len() - count)
+    }
+
+    pub fn card_is_legal(&self, card: &Card) -> bool {
+        self.0
+            .last()
+            .map_or(true, |last_card| last_card.is_legal(card))
+    }
+
+    pub fn stack_is_legal(&self, stack: &[Card]) -> bool {
+        stack.first().map_or(true, |card| self.card_is_legal(card))
+    }
+
     pub fn try_push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
-        if self.is_legal(&card) {
+        if self.card_is_legal(&card) {
             self.push(card);
             Ok(())
         } else {
@@ -40,8 +66,25 @@ impl Cascade {
         self.0.push(card)
     }
 
+    pub fn try_push_stack(&mut self, stack: Vec<Card>) -> Result<(), (Vec<Card>, &'static str)> {
+        if self.stack_is_legal(&stack) {
+            self.push_stack(stack);
+            Ok(())
+        } else {
+            Err((stack, "Those cards cannot go on that cascade."))
+        }
+    }
+
+    pub fn push_stack(&mut self, mut stack: Vec<Card>) {
+        self.0.append(&mut stack);
+    }
+
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     pub fn is_sequential(&self) -> bool {
@@ -59,10 +102,6 @@ impl Cascade {
 
     pub fn cards(&self) -> &Vec<Card> {
         &self.0
-    }
-
-    pub fn take(&mut self, count: usize) -> Vec<Card> {
-        self.0.split_off(self.0.len() - count)
     }
 }
 
@@ -110,7 +149,7 @@ mod tests {
         let mut cascade = Cascade::empty();
         let card = Card::new(Rank::Ace, Suit::Hearts);
 
-        assert!(cascade.is_legal(&card));
+        assert!(cascade.card_is_legal(&card));
         assert_eq!(Ok(()), cascade.try_push(card));
 
         assert_eq!(
@@ -124,7 +163,7 @@ mod tests {
         let mut cascade = Cascade::new(vec![Card::new(Rank::King, Suit::Clubs)]);
         let card = Card::new(Rank::Queen, Suit::Hearts);
 
-        assert!(cascade.is_legal(&card));
+        assert!(cascade.card_is_legal(&card));
         assert_eq!(Ok(()), cascade.try_push(card));
 
         assert_eq!(
@@ -141,7 +180,7 @@ mod tests {
         let mut cascade = Cascade::new(vec![Card::new(Rank::King, Suit::Clubs)]);
         let card = Card::new(Rank::Queen, Suit::Spades);
 
-        assert_eq!(false, cascade.is_legal(&card));
+        assert_eq!(false, cascade.card_is_legal(&card));
         assert_eq!(
             Err((
                 Card::new(Rank::Queen, Suit::Spades),
@@ -161,7 +200,7 @@ mod tests {
         let mut cascade = Cascade::new(vec![Card::new(Rank::King, Suit::Clubs)]);
         let card = Card::new(Rank::Jack, Suit::Hearts);
 
-        assert_eq!(false, cascade.is_legal(&card));
+        assert_eq!(false, cascade.card_is_legal(&card));
         assert_eq!(
             Err((
                 Card::new(Rank::Jack, Suit::Hearts),
@@ -195,14 +234,14 @@ mod tests {
     #[test]
     fn len() {
         assert_eq!(0, Cascade::empty().len());
-        assert_eq!(
-            2,
-            Cascade::new(vec![
-                Card::new(Rank::King, Suit::Clubs),
-                Card::new(Rank::Queen, Suit::Hearts)
-            ])
-            .len(),
-        );
+        assert!(Cascade::empty().is_empty());
+
+        let nonempty = Cascade::new(vec![
+            Card::new(Rank::King, Suit::Clubs),
+            Card::new(Rank::Queen, Suit::Hearts),
+        ]);
+        assert_eq!(2, nonempty.len());
+        assert_eq!(false, nonempty.is_empty());
     }
 
     #[test]
@@ -240,7 +279,7 @@ mod tests {
     }
 
     #[test]
-    fn take() {
+    fn pop_stack() {
         let mut cascade = Cascade::new(vec![
             Card::new(Rank::Four, Suit::Clubs),
             Card::new(Rank::Three, Suit::Spades),
@@ -253,7 +292,7 @@ mod tests {
                 Card::new(Rank::Two, Suit::Hearts),
                 Card::new(Rank::Ace, Suit::Diamonds)
             ],
-            cascade.take(2),
+            cascade.pop_stack(2),
         );
 
         assert_eq!(
@@ -267,8 +306,8 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn take_invalid() {
+    fn pop_stack_invalid() {
         let mut cascade = Cascade::new(vec![Card::new(Rank::Ace, Suit::Hearts)]);
-        cascade.take(2);
+        cascade.pop_stack(2);
     }
 }
