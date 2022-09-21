@@ -3,9 +3,9 @@ A Freecell implementation in Rust.
 
 ## How to play
 
-There are two binaries, one with a GUI created using
-[Druid](https://github.com/linebender/druid/), the other a command-line
-application. They both sit on top of game logic implemented at the data layer.
+There are two binaries, a rich command-line app that supports a mouse interface,
+as well as a simple stdin/stdout app.  They both sit on top of game logic
+implemented at the data layer.
 
 Running both of them requires Rust and Cargo to be installed on your local
 environment.
@@ -14,7 +14,7 @@ environment.
 
 The CLI works, although it doesn't provide convenience features like
 automatically moving multiple cards at once. I suggest enlarging the font size
-of your terminal to make everything easier to read, since the rendering is quick
+of your terminal to make everything easier to read, since the rendering is quite
 small.
 
     cargo run --bin cli
@@ -32,14 +32,4 @@ be aware of terminal size and support mouse input.
 
     cargo run --bin tui
 
-Currently, the only way to exit the game (or interact with it in any way) is to
-terminate the process from another window/tab:
-
-    $ killall tui
-
-### GUI
-
-The GUI is also incomplete and very, very broken. It will probably never be finished
-because Druid has moved on.
-
-    cargo run --bin gui --features gui
+No interactivity is implemented at this point.

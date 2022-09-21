@@ -5,16 +5,11 @@ authors = ["Mikkel Paulson <git@email.mikkel.ca>"]
 edition = "2021"
 
 [[bin]]
-name = "gui"
-required-features = ["gui"]
-
-[[bin]]
 name = "tui"
 required-features = ["tui"]
 
 [features]
 default = []
-gui = ["dep:druid"]
 #tui = ["dep:termion"]
 tui = []
 

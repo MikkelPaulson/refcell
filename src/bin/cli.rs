@@ -1,4 +1,4 @@
-use refcell::data::*;
+use refcell::*;
 
 use std::io;
 

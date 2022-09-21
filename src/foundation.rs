@@ -1,17 +1,12 @@
 use super::{Card, Rank, Single, Suit};
 use std::fmt;
-use std::rc::Rc;
-
-#[cfg(feature = "gui")]
-use druid::Data;
 
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "gui", derive(Data))]
-pub struct Foundation(Rc<Vec<Card>>);
+pub struct Foundation(Vec<Card>);
 
 impl Foundation {
     pub fn empty() -> Self {
-        Self(Rc::new(Vec::new()))
+        Self(Vec::new())
     }
 
     pub fn get_suit(&self) -> Option<Suit> {
@@ -35,12 +30,8 @@ impl Foundation {
 
     pub fn try_push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
         if self.is_legal(&card) {
-            if let Some(cards) = Rc::get_mut(&mut self.0) {
-                cards.push(card);
-                Ok(())
-            } else {
-                panic!("Could not modify foundation!");
-            }
+            self.0.push(card);
+            Ok(())
         } else {
             Err((card, "That card is not valid on that foundation."))
         }
@@ -70,7 +61,6 @@ impl fmt::Display for Foundation {
 #[cfg(test)]
 mod tests {
     use super::{Card, Foundation, Rank, Single, Suit};
-    use std::rc::Rc;
 
     #[test]
     fn empty() {
@@ -219,6 +209,6 @@ mod tests {
     }
 
     fn make_foundation(cards: Vec<Card>) -> Foundation {
-        Foundation(Rc::new(cards))
+        Foundation(cards)
     }
 }

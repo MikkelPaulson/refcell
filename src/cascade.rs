@@ -1,17 +1,12 @@
 use super::{Card, Rank};
 use std::fmt;
-use std::rc::Rc;
-
-#[cfg(feature = "gui")]
-use druid::Data;
 
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "gui", derive(Data))]
-pub struct Cascade(Rc<Vec<Card>>);
+pub struct Cascade(Vec<Card>);
 
 impl Cascade {
     pub fn new(cards: Vec<Card>) -> Self {
-        Self(Rc::new(cards))
+        Self(cards)
     }
 
     pub fn empty() -> Self {
@@ -19,7 +14,7 @@ impl Cascade {
     }
 
     pub fn pop(&mut self) -> Option<Card> {
-        Rc::get_mut(&mut self.0).unwrap().pop()
+        self.0.pop()
     }
 
     pub fn is_legal(&self, card: &Card) -> bool {
@@ -43,7 +38,7 @@ impl Cascade {
     }
 
     pub fn push(&mut self, card: Card) {
-        Rc::get_mut(&mut self.0).unwrap().push(card)
+        self.0.push(card)
     }
 
     pub fn len(&self) -> usize {
@@ -68,9 +63,7 @@ impl Cascade {
     }
 
     pub fn take(&mut self, count: usize) -> Vec<Card> {
-        Rc::get_mut(&mut self.0)
-            .map(|cards| cards.split_off(cards.len() - count))
-            .unwrap()
+        self.0.split_off(self.0.len() - count)
     }
 }
 
@@ -87,19 +80,18 @@ impl fmt::Display for Cascade {
 mod tests {
     use super::super::Suit;
     use super::{Card, Cascade, Rank};
-    use std::rc::Rc;
 
     #[test]
     fn new() {
         assert_eq!(
-            Cascade(Rc::new(vec![Card::new(Rank::Ace, Suit::Hearts)])),
+            Cascade(vec![Card::new(Rank::Ace, Suit::Hearts)]),
             Cascade::new(vec![Card::new(Rank::Ace, Suit::Hearts)]),
         );
     }
 
     #[test]
     fn empty() {
-        assert_eq!(Cascade(Rc::new(Vec::new())), Cascade::empty());
+        assert_eq!(Cascade(Vec::new()), Cascade::empty());
     }
 
     #[test]

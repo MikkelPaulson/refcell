@@ -3,17 +3,13 @@ use rand::thread_rng;
 use std::fmt;
 use std::iter;
 use std::ops::{Add, Sub};
-use std::rc::Rc;
-
-#[cfg(feature = "gui")]
-use druid::Data;
 
 #[derive(Debug)]
-pub struct Deck(Rc<Vec<Card>>);
+pub struct Deck(Vec<Card>);
 
 impl Deck {
     pub fn new(cards: Vec<Card>) -> Self {
-        Self(Rc::new(cards))
+        Self(cards)
     }
 
     /// For funsies, define a "fresh" deck according to the sequence used by Bicycle.
@@ -44,11 +40,11 @@ impl Deck {
 
     pub fn shuffle(&mut self) {
         let mut rng = thread_rng();
-        Rc::get_mut(&mut self.0).unwrap().shuffle(&mut rng);
+        self.0.shuffle(&mut rng);
     }
 
     pub fn pop(&mut self) -> Option<Card> {
-        Rc::get_mut(&mut self.0).unwrap().pop()
+        self.0.pop()
     }
 }
 
@@ -92,7 +88,6 @@ mod test_deck {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-#[cfg_attr(feature = "gui", derive(Data))]
 pub struct Card(Rank, Suit);
 
 impl Card {
@@ -265,7 +260,6 @@ mod test_card {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-#[cfg_attr(feature = "gui", derive(Data))]
 pub enum Suit {
     Clubs,
     Diamonds,
