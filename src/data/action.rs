@@ -74,6 +74,14 @@ impl str::FromStr for Coordinate {
                 'w'..='z' | 'W'..='Z' => {
                     Ok(Coordinate::Foundation(c.to_digit(36).unwrap() as u8 - 32))
                 }
+                '!' => Ok(Coordinate::Cascade(0)),
+                '@' => Ok(Coordinate::Cascade(1)),
+                '#' => Ok(Coordinate::Cascade(2)),
+                '$' => Ok(Coordinate::Cascade(3)),
+                '%' => Ok(Coordinate::Cascade(4)),
+                '^' => Ok(Coordinate::Cascade(5)),
+                '&' => Ok(Coordinate::Cascade(6)),
+                '*' => Ok(Coordinate::Cascade(7)),
                 _ => Err("Invalid input."),
             }
         } else {
