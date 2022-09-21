@@ -67,7 +67,7 @@ impl str::FromStr for Coordinate {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Some(c) = s.chars().nth(0) {
+        if let Some(c) = s.chars().next() {
             match c {
                 '1'..='8' => Ok(Coordinate::Cascade(c.to_digit(10).unwrap() as u8 - 1)),
                 'a'..='d' | 'A'..='D' => Ok(Coordinate::Cell(c.to_digit(36).unwrap() as u8 - 10)),
@@ -104,6 +104,15 @@ mod test_coordinate {
         assert_eq!(Ok(Coordinate::Cascade(5)), "6".parse::<Coordinate>());
         assert_eq!(Ok(Coordinate::Cascade(6)), "7".parse::<Coordinate>());
         assert_eq!(Ok(Coordinate::Cascade(7)), "8".parse::<Coordinate>());
+
+        assert_eq!(Ok(Coordinate::Cascade(0)), "!".parse::<Coordinate>());
+        assert_eq!(Ok(Coordinate::Cascade(1)), "@".parse::<Coordinate>());
+        assert_eq!(Ok(Coordinate::Cascade(2)), "#".parse::<Coordinate>());
+        assert_eq!(Ok(Coordinate::Cascade(3)), "$".parse::<Coordinate>());
+        assert_eq!(Ok(Coordinate::Cascade(4)), "%".parse::<Coordinate>());
+        assert_eq!(Ok(Coordinate::Cascade(5)), "^".parse::<Coordinate>());
+        assert_eq!(Ok(Coordinate::Cascade(6)), "&".parse::<Coordinate>());
+        assert_eq!(Ok(Coordinate::Cascade(7)), "*".parse::<Coordinate>());
     }
 
     #[test]
@@ -135,7 +144,7 @@ mod test_coordinate {
         assert_eq!(Err("Invalid input."), "9".parse::<Coordinate>());
         assert_eq!(Err("Invalid input."), "0".parse::<Coordinate>());
         assert_eq!(Err("Invalid input."), "E".parse::<Coordinate>());
-        assert_eq!(Err("Invalid input."), "!".parse::<Coordinate>());
+        assert_eq!(Err("Invalid input."), "}".parse::<Coordinate>());
         assert_eq!(Err("Invalid input."), "".parse::<Coordinate>());
     }
 }
