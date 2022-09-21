@@ -33,7 +33,7 @@ impl Foundation {
         }
     }
 
-    pub fn push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
+    pub fn try_push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
         if self.is_legal(&card) {
             if let Some(cards) = Rc::get_mut(&mut self.0) {
                 cards.push(card);
@@ -127,12 +127,12 @@ mod tests {
     }
 
     #[test]
-    fn push_empty_legal() {
+    fn try_push_empty_legal() {
         let mut foundation = make_foundation(Vec::new());
         let card = Card::new(Rank::Ace, Suit::Spades);
 
         assert!(foundation.is_legal(&card));
-        assert_eq!(Ok(()), foundation.push(card));
+        assert_eq!(Ok(()), foundation.try_push(card));
 
         assert_eq!(
             make_foundation(vec![Card::new(Rank::Ace, Suit::Spades)]),
@@ -141,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn push_empty_illegal_rank() {
+    fn try_push_empty_illegal_rank() {
         let mut foundation = make_foundation(Vec::new());
         let card = Card::new(Rank::Two, Suit::Spades);
 
@@ -151,14 +151,14 @@ mod tests {
                 Card::new(Rank::Two, Suit::Spades),
                 "That card is not valid on that foundation.",
             )),
-            foundation.push(card),
+            foundation.try_push(card),
         );
 
         assert_eq!(make_foundation(Vec::new()), foundation);
     }
 
     #[test]
-    fn push_nonempty_legal() {
+    fn try_push_nonempty_legal() {
         let mut foundation = make_foundation(vec![
             Card::new(Rank::Ace, Suit::Clubs),
             Card::new(Rank::Two, Suit::Clubs),
@@ -166,7 +166,7 @@ mod tests {
         let card = Card::new(Rank::Three, Suit::Clubs);
 
         assert!(foundation.is_legal(&card));
-        assert_eq!(Ok(()), foundation.push(card));
+        assert_eq!(Ok(()), foundation.try_push(card));
 
         assert_eq!(
             make_foundation(vec![
@@ -179,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn push_nonempty_illegal_rank() {
+    fn try_push_nonempty_illegal_rank() {
         let mut foundation = make_foundation(vec![Card::new(Rank::Ace, Suit::Clubs)]);
         let card = Card::new(Rank::Three, Suit::Clubs);
 
@@ -189,7 +189,7 @@ mod tests {
                 Card::new(Rank::Three, Suit::Clubs),
                 "That card is not valid on that foundation.",
             )),
-            foundation.push(card),
+            foundation.try_push(card),
         );
 
         assert_eq!(
@@ -199,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn push_nonempty_illegal_suit() {
+    fn try_push_nonempty_illegal_suit() {
         let mut foundation = make_foundation(vec![Card::new(Rank::Ace, Suit::Clubs)]);
         let card = Card::new(Rank::Two, Suit::Hearts);
 
@@ -209,7 +209,7 @@ mod tests {
                 Card::new(Rank::Two, Suit::Hearts),
                 "That card is not valid on that foundation.",
             )),
-            foundation.push(card),
+            foundation.try_push(card),
         );
 
         assert_eq!(

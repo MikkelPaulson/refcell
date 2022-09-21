@@ -33,16 +33,16 @@ impl Cascade {
         }
     }
 
-    pub fn push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
+    pub fn try_push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
         if self.is_legal(&card) {
-            self.push_unchecked(card);
+            self.push(card);
             Ok(())
         } else {
             Err((card, "That card cannot go on that cascade."))
         }
     }
 
-    pub fn push_unchecked(&mut self, card: Card) {
+    pub fn push(&mut self, card: Card) {
         Rc::get_mut(&mut self.0).unwrap().push(card)
     }
 
@@ -115,12 +115,12 @@ mod tests {
     }
 
     #[test]
-    fn push_empty() {
+    fn try_push_empty() {
         let mut cascade = Cascade::empty();
         let card = Card::new(Rank::Ace, Suit::Hearts);
 
         assert!(cascade.is_legal(&card));
-        assert_eq!(Ok(()), cascade.push(card));
+        assert_eq!(Ok(()), cascade.try_push(card));
 
         assert_eq!(
             Cascade::new(vec![Card::new(Rank::Ace, Suit::Hearts)]),
@@ -129,12 +129,12 @@ mod tests {
     }
 
     #[test]
-    fn push_legal() {
+    fn try_push_legal() {
         let mut cascade = Cascade::new(vec![Card::new(Rank::King, Suit::Clubs)]);
         let card = Card::new(Rank::Queen, Suit::Hearts);
 
         assert!(cascade.is_legal(&card));
-        assert_eq!(Ok(()), cascade.push(card));
+        assert_eq!(Ok(()), cascade.try_push(card));
 
         assert_eq!(
             Cascade::new(vec![
@@ -146,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn push_illegal_color() {
+    fn try_push_illegal_color() {
         let mut cascade = Cascade::new(vec![Card::new(Rank::King, Suit::Clubs)]);
         let card = Card::new(Rank::Queen, Suit::Spades);
 
@@ -156,7 +156,7 @@ mod tests {
                 Card::new(Rank::Queen, Suit::Spades),
                 "That card cannot go on that cascade.",
             )),
-            cascade.push(card),
+            cascade.try_push(card),
         );
 
         assert_eq!(
@@ -166,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    fn push_illegal_rank() {
+    fn try_push_illegal_rank() {
         let mut cascade = Cascade::new(vec![Card::new(Rank::King, Suit::Clubs)]);
         let card = Card::new(Rank::Jack, Suit::Hearts);
 
@@ -176,7 +176,7 @@ mod tests {
                 Card::new(Rank::Jack, Suit::Hearts),
                 "That card cannot go on that cascade.",
             )),
-            cascade.push(card),
+            cascade.try_push(card),
         );
 
         assert_eq!(
@@ -186,11 +186,11 @@ mod tests {
     }
 
     #[test]
-    fn push_unchecked() {
+    fn push() {
         let mut cascade = Cascade::new(vec![Card::new(Rank::King, Suit::Clubs)]);
         let card = Card::new(Rank::Jack, Suit::Hearts);
 
-        cascade.push_unchecked(card);
+        cascade.push(card);
 
         assert_eq!(
             Cascade::new(vec![

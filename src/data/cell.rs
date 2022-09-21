@@ -19,7 +19,7 @@ impl Cell {
         Self { card: None }
     }
 
-    pub fn push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
+    pub fn try_push(&mut self, card: Card) -> Result<(), (Card, &'static str)> {
         if self.is_empty() {
             self.card = Some(card);
             Ok(())
@@ -81,18 +81,18 @@ mod tests {
     }
 
     #[test]
-    fn push_empty() {
+    fn try_push_empty() {
         let mut test = cell(None);
-        assert_eq!(Ok(()), test.push(card()));
+        assert_eq!(Ok(()), test.try_push(card()));
         assert_eq!(cell(some_card()), test);
     }
 
     #[test]
-    fn push_not_empty() {
+    fn try_push_not_empty() {
         let mut test = cell(some_card());
         assert_eq!(
             Err((card(), "A card is already present on that cell.")),
-            test.push(card()),
+            test.try_push(card()),
         );
     }
 

@@ -53,7 +53,7 @@ impl Tableau {
 
         iter::from_fn(|| deck.pop())
             .zip((0..8).cycle())
-            .for_each(|(card, i)| tableau.cascades[i].push_unchecked(card));
+            .for_each(|(card, i)| tableau.cascades[i].push(card));
 
         tableau
     }
@@ -65,13 +65,13 @@ impl Tableau {
             Coordinate::Foundation(_) => return Err("You cannot take a card from a foundation."),
         } {
             if let Err((card, message)) = match action.to {
-                Coordinate::Cascade(n) => self.cascades[n as usize].push(card),
-                Coordinate::Cell(n) => self.cells[n as usize].push(card),
-                Coordinate::Foundation(n) => self.foundations[n as usize].push(card),
+                Coordinate::Cascade(n) => self.cascades[n as usize].try_push(card),
+                Coordinate::Cell(n) => self.cells[n as usize].try_push(card),
+                Coordinate::Foundation(n) => self.foundations[n as usize].try_push(card),
             } {
                 match action.from {
-                    Coordinate::Cascade(n) => self.cascades[n as usize].push_unchecked(card),
-                    Coordinate::Cell(n) => self.cells[n as usize].push(card).unwrap(),
+                    Coordinate::Cascade(n) => self.cascades[n as usize].push(card),
+                    Coordinate::Cell(n) => self.cells[n as usize].try_push(card).unwrap(),
                     Coordinate::Foundation(_) => unreachable!(),
                 }
 
@@ -282,10 +282,10 @@ mod tests {
     fn action_legal_to_foundation() {
         let mut tableau = Tableau::empty();
         tableau.cells[0]
-            .push(Card::new(Rank::Ace, Suit::Clubs))
+            .try_push(Card::new(Rank::Ace, Suit::Clubs))
             .unwrap();
         tableau.cascades[0]
-            .push(Card::new(Rank::Two, Suit::Clubs))
+            .try_push(Card::new(Rank::Two, Suit::Clubs))
             .unwrap();
 
         assert_eq!(
@@ -315,10 +315,10 @@ mod tests {
     fn action_legal_to_cascade() {
         let mut tableau = Tableau::empty();
         tableau.cells[0]
-            .push(Card::new(Rank::King, Suit::Clubs))
+            .try_push(Card::new(Rank::King, Suit::Clubs))
             .unwrap();
         tableau.cascades[0]
-            .push(Card::new(Rank::Queen, Suit::Hearts))
+            .try_push(Card::new(Rank::Queen, Suit::Hearts))
             .unwrap();
 
         assert_eq!(
@@ -346,10 +346,10 @@ mod tests {
     fn action_legal_to_cell() {
         let mut tableau = Tableau::empty();
         tableau.cells[0]
-            .push(Card::new(Rank::Ace, Suit::Hearts))
+            .try_push(Card::new(Rank::Ace, Suit::Hearts))
             .unwrap();
         tableau.cascades[0]
-            .push(Card::new(Rank::Ace, Suit::Spades))
+            .try_push(Card::new(Rank::Ace, Suit::Spades))
             .unwrap();
 
         assert_eq!(
@@ -383,12 +383,12 @@ mod tests {
     #[test]
     fn action_illegal() {
         let mut tableau = Tableau::empty();
-        tableau.cascades[0].push_unchecked(Card::new(Rank::King, Suit::Hearts));
+        tableau.cascades[0].try_push(Card::new(Rank::King, Suit::Hearts));
         tableau.cells[0]
-            .push(Card::new(Rank::Queen, Suit::Hearts))
+            .try_push(Card::new(Rank::Queen, Suit::Hearts))
             .unwrap();
         tableau.cells[1]
-            .push(Card::new(Rank::Jack, Suit::Hearts))
+            .try_push(Card::new(Rank::Jack, Suit::Hearts))
             .unwrap();
 
         assert_eq!(
@@ -434,7 +434,7 @@ mod tests {
     fn action_illegal_from_foundation() {
         let mut tableau = Tableau::empty();
         tableau.foundations[0]
-            .push(Card::new(Rank::Ace, Suit::Hearts))
+            .try_push(Card::new(Rank::Ace, Suit::Hearts))
             .unwrap();
 
         assert_eq!(
