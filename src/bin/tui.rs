@@ -6,7 +6,7 @@ use std::iter;
 use std::thread::sleep;
 use std::time::Duration;
 use termion::raw::IntoRawMode;
-use termion::{cursor, input, screen};
+use termion::{color, cursor, input, screen};
 
 fn main() -> io::Result<()> {
     let mut tableau = Tableau::deal(Deck::shuffled());
@@ -14,7 +14,8 @@ fn main() -> io::Result<()> {
     let _hide_cursor = termion::cursor::HideCursor::from(io::stdout());
     let mut terminal =
         input::MouseTerminal::from(screen::AlternateScreen::from(io::stdout().into_raw_mode()?));
-    write!(terminal, "{}", termion::clear::All)?;
+
+    clear(&mut terminal)?;
 
     let scale = UiScale::from_terminal_size(termion::terminal_size()?);
 
@@ -84,6 +85,7 @@ impl UiScale {
 struct CardView {
     scale: UiScale,
     card: Option<Card>,
+    highlighted: bool,
 }
 
 impl CardView {
@@ -91,6 +93,7 @@ impl CardView {
         Self {
             scale,
             card: card.cloned(),
+            highlighted: false,
         }
     }
 
@@ -109,18 +112,12 @@ impl CardView {
                     ' '
                 }
             }
+        } else if pos.0 == self.scale.get_card_width() / 2
+            && pos.1 == self.scale.get_card_height() / 2
+        {
+            '✖'
         } else {
-            let (width, height) = self.scale.get_card_size();
-
-            match pos {
-                (0, 0) => '┏',
-                (0, row) if row + 1 == height => '┗',
-                (col, 0) if col + 1 == width => '┓',
-                (col, row) if col + 1 == width && row + 1 == height => '┛',
-                (col, _) if col == 0 || col + 1 == width => '┃',
-                (_, row) if row == 0 || row + 1 == height => '━',
-                _ => ' ',
-            }
+            ' '
         }
     }
 
@@ -212,19 +209,28 @@ impl CardView {
     }
 
     fn line_at(&self, row: u16) -> String {
-        if let Some(card) = self.card {
-            if card.get_suit().is_red() {
-                "\x1b[91;7m"
+        let line: String = (0..self.scale.get_card_width())
+            .map(|col| self.char_at((col, row)))
+            .collect();
+
+        format!(
+            "{}{}{}{}{}",
+            if self.card.is_none() {
+                color::Fg(color::AnsiValue::grayscale(8))
+            } else if self.highlighted {
+                color::Fg(color::AnsiValue::grayscale(24))
             } else {
-                "\x1b[39;7m"
-            }
-        } else {
-            ""
-        }
-        .chars()
-        .chain((0..self.scale.get_card_size().0).map(|col| self.char_at((col, row))))
-        .chain("\x1b[0m".chars())
-        .collect()
+                color::Fg(color::AnsiValue::grayscale(18))
+            },
+            match self.card.map(|card| card.get_suit().is_red()) {
+                Some(true) => color::Bg(color::AnsiValue::rgb(4, 0, 0)),
+                Some(false) => color::Bg(color::AnsiValue::grayscale(6)),
+                None => color::Bg(color::AnsiValue::grayscale(18)),
+            },
+            line,
+            color::Fg(color::Reset),
+            color::Bg(color::Reset),
+        )
     }
 }
 
@@ -236,6 +242,21 @@ enum CardChar {
     NumberOverflowRight,
     Suit,
     Blank,
+}
+
+fn clear(terminal: &mut impl Write) -> io::Result<()> {
+    write!(terminal, "{}", termion::clear::All)?;
+
+    let (width, height) = termion::terminal_size()?;
+
+    for row in 1..=height {
+        write!(terminal, "{}\x1b[48;5;22m", cursor::Goto(1, row))?;
+        for col in 1..=width {
+            write!(terminal, " ")?;
+        }
+    }
+
+    Ok(())
 }
 
 fn render_tableau(terminal: &mut impl Write, tableau: &Tableau, scale: UiScale) -> io::Result<()> {
@@ -261,9 +282,9 @@ fn render_tableau(terminal: &mut impl Write, tableau: &Tableau, scale: UiScale) 
                 terminal,
                 Some(card),
                 col as u16 * scale.get_column_spacing() + 1,
-                row as u16 + scale.get_row_spacing(),
+                row as u16 + scale.get_row_spacing() + 1,
                 scale,
-            );
+            )?;
         }
     }
 
