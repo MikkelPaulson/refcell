@@ -23,7 +23,7 @@ impl Foundation {
         } else {
             self.peek().map_or(false, |foundation_card| {
                 card.get_suit() == foundation_card.get_suit()
-                    && card.get_rank() - 1 == foundation_card.get_rank()
+                    && card.get_rank().try_decrement() == Some(foundation_card.get_rank())
             })
         }
     }

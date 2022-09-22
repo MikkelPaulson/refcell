@@ -2,7 +2,6 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::fmt;
 use std::iter;
-use std::ops::{Add, Sub};
 
 #[derive(Debug)]
 pub struct Deck(Vec<Card>);
@@ -159,6 +158,14 @@ impl Rank {
             Self::King => "K",
         }
     }
+
+    pub fn try_increment(&self) -> Option<Rank> {
+        (*self as u8 + 1).try_into().ok()
+    }
+
+    pub fn try_decrement(&self) -> Option<Rank> {
+        (*self as u8 - 1).try_into().ok()
+    }
 }
 
 impl fmt::Display for Rank {
@@ -193,22 +200,6 @@ impl TryFrom<u8> for Rank {
 impl From<Rank> for u8 {
     fn from(input: Rank) -> Self {
         input as Self
-    }
-}
-
-impl Add<u8> for Rank {
-    type Output = Self;
-
-    fn add(self, rhs: u8) -> Self::Output {
-        (self as u8 + rhs).try_into().unwrap()
-    }
-}
-
-impl Sub<u8> for Rank {
-    type Output = Self;
-
-    fn sub(self, rhs: u8) -> Self::Output {
-        (self as u8 - rhs).try_into().unwrap()
     }
 }
 
