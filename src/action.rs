@@ -1,24 +1,42 @@
+use core::num::NonZeroU8;
 use std::str;
 
 #[derive(Debug, PartialEq)]
 pub struct Action {
     pub from: FromCoordinate,
     pub to: ToCoordinate,
+    pub count: Option<NonZeroU8>,
 }
 
 impl str::FromStr for Action {
     type Err = &'static str;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s = s.trim();
-        if s.len() == 2 {
-            let from = s[0..1].parse()?;
-            let to = s[1..2].parse()?;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        let (input_count, input_coords) =
+            if let Some((input_count, input_coords)) = input.trim().split_once('+') {
+                (Some(input_count), input_coords)
+            } else {
+                (None, input.trim())
+            };
+
+        let count = if let Some(input_count) = input_count {
+            if input_count.is_empty() {
+                Some(u8::MAX.try_into().unwrap())
+            } else {
+                Some(input_count.parse().map_err(|_| "Invalid count")?)
+            }
+        } else {
+            None
+        };
+
+        if input_coords.len() == 2 {
+            let from = input_coords[0..1].parse()?;
+            let to = input_coords[1..2].parse()?;
 
             if from == to {
                 Err("The source and destination are the same.")
             } else {
-                Ok(Action { from, to })
+                Ok(Action { from, to, count })
             }
         } else {
             Err("Invalid input.")
@@ -35,9 +53,28 @@ mod test_action {
         assert_eq!(
             Ok(Action {
                 from: FromCoordinate::Cascade(0),
-                to: ToCoordinate::Cell(0)
+                to: ToCoordinate::Cell(0),
+                count: None,
             }),
             "1a\n".parse::<Action>(),
+        );
+
+        assert_eq!(
+            Ok(Action {
+                from: FromCoordinate::Cascade(6),
+                to: ToCoordinate::Cascade(7),
+                count: Some(255.try_into().unwrap()),
+            }),
+            "+78\n".parse::<Action>(),
+        );
+
+        assert_eq!(
+            Ok(Action {
+                from: FromCoordinate::Cascade(6),
+                to: ToCoordinate::Cascade(7),
+                count: Some(15.try_into().unwrap()),
+            }),
+            "15+78\n".parse::<Action>(),
         );
     }
 

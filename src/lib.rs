@@ -58,6 +58,7 @@ impl Tableau {
         if let Action {
             from: FromCoordinate::Cascade(n_from),
             to: ToCoordinate::Cascade(n_to),
+            count,
         } = action
         {
             let (n_from, n_to) = (n_from as usize, n_to as usize);
@@ -67,38 +68,55 @@ impl Tableau {
                 return Err("That space is empty.");
             }
 
+            let max_stack_size = {
+                let num_empty_cascades = self
+                    .cascades
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, c)| ![n_from, n_to].contains(i) && c.is_empty())
+                    .count();
+
+                let num_empty_cells = self.cells.iter().filter(|cell| cell.is_empty()).count();
+
+                ((num_empty_cells + 1) * (num_empty_cascades + 1))
+                    .min(from.len())
+                    .min(
+                        count
+                            .and_then(|i| u8::from(i).try_into().ok())
+                            .unwrap_or(usize::MAX),
+                    )
+            };
+
             if let Some(expected_rank) = to
                 .cards()
                 .last()
                 .and_then(|card| card.get_rank().try_decrement())
             {
-                let max_stack_size = {
-                    let num_empty_cascades = self
-                        .cascades
-                        .iter()
-                        .enumerate()
-                        .filter(|(i, c)| ![n_from, n_to].contains(i) && c.is_empty())
-                        .count();
-
-                    let num_empty_cells = self.cells.iter().filter(|cell| cell.is_empty()).count();
-
-                    ((num_empty_cells + 1) * (num_empty_cascades + 1)).min(from.len())
-                };
-
                 for i in 1..=max_stack_size {
                     if from.cards()[from.len() - i].get_rank() == expected_rank {
                         if let Some(stack) = self.cascades[n_from].try_pop_stack(i) {
-                            return if let Err((stack, message)) =
-                                self.cascades[n_to].try_push_stack(stack)
-                            {
-                                self.cascades[n_from].push_stack(stack);
-                                Err(message)
-                            } else {
-                                Ok(())
-                            };
+                            match self.cascades[n_to].try_push_stack(stack) {
+                                Ok(()) => return Ok(()),
+                                Err((stack, message)) => {
+                                    self.cascades[n_from].push_stack(stack);
+                                    return Err(message);
+                                }
+                            }
                         }
 
                         break;
+                    }
+                }
+            } else if let Some(count) = count {
+                if let Some(stack) = self.cascades[n_from]
+                    .try_pop_stack(max_stack_size.min(u8::from(count).try_into().unwrap()))
+                {
+                    match self.cascades[n_to].try_push_stack(stack) {
+                        Ok(()) => return Ok(()),
+                        Err((stack, message)) => {
+                            self.cascades[n_from].push_stack(stack);
+                            return Err(message);
+                        }
                     }
                 }
             }
@@ -338,6 +356,7 @@ mod tests {
             tableau.action(Action {
                 from: FromCoordinate::Cell(0),
                 to: ToCoordinate::Foundation(0),
+                count: None,
             }),
         );
         assert_eq!(
@@ -345,6 +364,7 @@ mod tests {
             tableau.action(Action {
                 from: FromCoordinate::Cascade(0),
                 to: ToCoordinate::Foundation(0),
+                count: None,
             }),
         );
 
@@ -371,6 +391,7 @@ mod tests {
             tableau.action(Action {
                 from: FromCoordinate::Cell(0),
                 to: ToCoordinate::Cascade(1),
+                count: None,
             }),
         );
 
@@ -379,6 +400,7 @@ mod tests {
             tableau.action(Action {
                 from: FromCoordinate::Cascade(0),
                 to: ToCoordinate::Cascade(1),
+                count: None,
             }),
         );
 
@@ -402,6 +424,7 @@ mod tests {
             tableau.action(Action {
                 from: FromCoordinate::Cell(0),
                 to: ToCoordinate::Cell(1),
+                count: None,
             }),
         );
 
@@ -410,6 +433,7 @@ mod tests {
             tableau.action(Action {
                 from: FromCoordinate::Cascade(0),
                 to: ToCoordinate::Cell(2),
+                count: None,
             }),
         );
 
@@ -441,6 +465,7 @@ mod tests {
             tableau.action(Action {
                 from: FromCoordinate::Cell(0),
                 to: ToCoordinate::Cascade(0),
+                count: None,
             }),
         );
 
@@ -449,6 +474,7 @@ mod tests {
             tableau.action(Action {
                 from: FromCoordinate::Cascade(0),
                 to: ToCoordinate::Cell(0),
+                count: None,
             }),
         );
 
@@ -457,6 +483,7 @@ mod tests {
             tableau.action(Action {
                 from: FromCoordinate::Cell(1),
                 to: ToCoordinate::Foundation(0),
+                count: None,
             }),
         );
 
@@ -483,7 +510,8 @@ mod tests {
             Err("That space is empty."),
             tableau.action(Action {
                 from: FromCoordinate::Cell(0),
-                to: ToCoordinate::Cell(1)
+                to: ToCoordinate::Cell(1),
+                count: None,
             }),
         );
 
@@ -491,7 +519,8 @@ mod tests {
             Err("That space is empty."),
             tableau.action(Action {
                 from: FromCoordinate::Cascade(0),
-                to: ToCoordinate::Cell(2)
+                to: ToCoordinate::Cell(2),
+                count: None,
             }),
         );
     }
