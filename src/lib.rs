@@ -16,11 +16,157 @@ mod deck;
 mod foundation;
 mod single;
 
+#[derive(Debug)]
+pub struct Game {
+    history: Vec<Tableau>,
+}
+
 #[derive(Clone, Debug)]
 pub struct Tableau {
     pub cells: [Cell; 4],
     pub foundations: [Foundation; 4],
     pub cascades: [Cascade; 8],
+}
+
+impl Game {
+    pub fn new(tableau: Tableau) -> Self {
+        Self {
+            history: vec![tableau],
+        }
+    }
+
+    pub fn deal(mut deck: Deck) -> Self {
+        let mut tableau = Tableau::empty();
+
+        iter::from_fn(|| deck.pop())
+            .zip((0..8).cycle())
+            .for_each(|(card, i)| tableau.cascades[i].push(card));
+
+        Self::new(tableau)
+    }
+
+    pub fn action(&mut self, action: Action) -> Result<(), &'static str> {
+        match action {
+            Action::Undo => {
+                if self.history.len() > 1 {
+                    self.history.pop();
+                    Ok(())
+                } else {
+                    Err("You are already at the first move.")
+                }
+            }
+            Action::MoveCard { from, to, count } => {
+                let mut tableau = self.tableau().clone();
+
+                if let (FromCoordinate::Cascade(n_from), ToCoordinate::Cascade(n_to)) = (from, to) {
+                    let (n_from, n_to) = (n_from as usize, n_to as usize);
+                    let (from_cascade, to_cascade) =
+                        (&tableau.cascades[n_from], &tableau.cascades[n_to]);
+
+                    if from_cascade.is_empty() {
+                        return Err("That space is empty.");
+                    }
+
+                    let max_stack_size = {
+                        let num_empty_cascades = tableau
+                            .cascades
+                            .iter()
+                            .enumerate()
+                            .filter(|(i, c)| ![n_from, n_to].contains(i) && c.is_empty())
+                            .count();
+
+                        let num_empty_cells =
+                            tableau.cells.iter().filter(|cell| cell.is_empty()).count();
+
+                        ((num_empty_cells + 1) * (num_empty_cascades + 1))
+                            .min(from_cascade.len())
+                            .min(
+                                count
+                                    .and_then(|i| u8::from(i).try_into().ok())
+                                    .unwrap_or(usize::MAX),
+                            )
+                    };
+
+                    if let Some(expected_rank) = to_cascade
+                        .cards()
+                        .last()
+                        .and_then(|card| card.get_rank().try_decrement())
+                    {
+                        for i in 1..=max_stack_size {
+                            if from_cascade.cards()[from_cascade.len() - i].get_rank()
+                                == expected_rank
+                            {
+                                if let Some(stack) = tableau.cascades[n_from].try_pop_stack(i) {
+                                    match tableau.cascades[n_to].try_push_stack(stack) {
+                                        Ok(()) => {
+                                            self.history.push(tableau);
+                                            return Ok(());
+                                        }
+                                        Err((stack, message)) => {
+                                            tableau.cascades[n_from].push_stack(stack);
+                                            return Err(message);
+                                        }
+                                    }
+                                }
+
+                                break;
+                            }
+                        }
+                    } else if let Some(count) = count {
+                        if let Some(stack) = tableau.cascades[n_from]
+                            .try_pop_stack(max_stack_size.min(u8::from(count).try_into().unwrap()))
+                        {
+                            match tableau.cascades[n_to].try_push_stack(stack) {
+                                Ok(()) => {
+                                    self.history.push(tableau);
+                                    return Ok(());
+                                }
+                                Err((stack, message)) => {
+                                    tableau.cascades[n_from].push_stack(stack);
+                                    return Err(message);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                let card = match from {
+                    FromCoordinate::Cascade(n) => tableau.cascades[n as usize].pop(),
+                    FromCoordinate::Cell(n) => tableau.cells[n as usize].take(),
+                }
+                .ok_or("That space is empty.")?;
+
+                if let Err((card, message)) = match to {
+                    ToCoordinate::Cascade(n) => tableau.cascades[n as usize].try_push(card),
+                    ToCoordinate::Cell(n) => tableau.cells[n as usize].try_push(card),
+                    ToCoordinate::Foundation(n) => tableau.foundations[n as usize].try_push(card),
+                } {
+                    match from {
+                        FromCoordinate::Cascade(n) => tableau.cascades[n as usize].push(card),
+                        FromCoordinate::Cell(n) => {
+                            tableau.cells[n as usize].try_push(card).unwrap()
+                        }
+                    }
+
+                    Err(message)
+                } else {
+                    self.history.push(tableau);
+                    Ok(())
+                }
+            }
+        }
+    }
+
+    pub fn is_won(&self) -> bool {
+        self.tableau()
+            .cascades
+            .iter()
+            .all(|cascade| cascade.is_sequential())
+    }
+
+    fn tableau(&self) -> &Tableau {
+        self.history.last().unwrap()
+    }
 }
 
 impl Tableau {
@@ -43,109 +189,11 @@ impl Tableau {
                 .unwrap(),
         }
     }
+}
 
-    pub fn deal(mut deck: Deck) -> Self {
-        let mut tableau = Self::empty();
-
-        iter::from_fn(|| deck.pop())
-            .zip((0..8).cycle())
-            .for_each(|(card, i)| tableau.cascades[i].push(card));
-
-        tableau
-    }
-
-    pub fn action(&mut self, action: Action) -> Result<(), &'static str> {
-        if let Action {
-            from: FromCoordinate::Cascade(n_from),
-            to: ToCoordinate::Cascade(n_to),
-            count,
-        } = action
-        {
-            let (n_from, n_to) = (n_from as usize, n_to as usize);
-            let (from, to) = (&self.cascades[n_from], &self.cascades[n_to]);
-
-            if from.is_empty() {
-                return Err("That space is empty.");
-            }
-
-            let max_stack_size = {
-                let num_empty_cascades = self
-                    .cascades
-                    .iter()
-                    .enumerate()
-                    .filter(|(i, c)| ![n_from, n_to].contains(i) && c.is_empty())
-                    .count();
-
-                let num_empty_cells = self.cells.iter().filter(|cell| cell.is_empty()).count();
-
-                ((num_empty_cells + 1) * (num_empty_cascades + 1))
-                    .min(from.len())
-                    .min(
-                        count
-                            .and_then(|i| u8::from(i).try_into().ok())
-                            .unwrap_or(usize::MAX),
-                    )
-            };
-
-            if let Some(expected_rank) = to
-                .cards()
-                .last()
-                .and_then(|card| card.get_rank().try_decrement())
-            {
-                for i in 1..=max_stack_size {
-                    if from.cards()[from.len() - i].get_rank() == expected_rank {
-                        if let Some(stack) = self.cascades[n_from].try_pop_stack(i) {
-                            match self.cascades[n_to].try_push_stack(stack) {
-                                Ok(()) => return Ok(()),
-                                Err((stack, message)) => {
-                                    self.cascades[n_from].push_stack(stack);
-                                    return Err(message);
-                                }
-                            }
-                        }
-
-                        break;
-                    }
-                }
-            } else if let Some(count) = count {
-                if let Some(stack) = self.cascades[n_from]
-                    .try_pop_stack(max_stack_size.min(u8::from(count).try_into().unwrap()))
-                {
-                    match self.cascades[n_to].try_push_stack(stack) {
-                        Ok(()) => return Ok(()),
-                        Err((stack, message)) => {
-                            self.cascades[n_from].push_stack(stack);
-                            return Err(message);
-                        }
-                    }
-                }
-            }
-        }
-
-        let card = match action.from {
-            FromCoordinate::Cascade(n) => self.cascades[n as usize].pop(),
-            FromCoordinate::Cell(n) => self.cells[n as usize].take(),
-        }
-        .ok_or("That space is empty.")?;
-
-        if let Err((card, message)) = match action.to {
-            ToCoordinate::Cascade(n) => self.cascades[n as usize].try_push(card),
-            ToCoordinate::Cell(n) => self.cells[n as usize].try_push(card),
-            ToCoordinate::Foundation(n) => self.foundations[n as usize].try_push(card),
-        } {
-            match action.from {
-                FromCoordinate::Cascade(n) => self.cascades[n as usize].push(card),
-                FromCoordinate::Cell(n) => self.cells[n as usize].try_push(card).unwrap(),
-            }
-
-            Err(message)
-        } else {
-            Ok(())
-        }
-    }
-
-    pub fn is_won(&self) -> bool {
-        self.cascades.iter().all(|cascade| cascade.is_sequential())
+impl fmt::Display for Game {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "{}", self.tableau())
     }
 }
 
@@ -269,32 +317,29 @@ impl fmt::Display for Tableau {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        Action, Card, Cell, Deck, Foundation, FromCoordinate, Rank, Single, Suit, Tableau,
-        ToCoordinate,
-    };
+    use super::*;
 
     #[test]
     fn deal() {
-        let tableau = Tableau::deal(Deck::fresh());
-        tableau
+        let game = Game::deal(Deck::fresh());
+        game.tableau()
             .cells
             .iter()
             .for_each(|cell| assert_eq!(&Cell::empty(), cell));
-        tableau
+        game.tableau()
             .foundations
             .iter()
             .for_each(|foundation| assert_eq!(&Foundation::empty(), foundation));
-        tableau.cascades[0..4]
+        game.tableau().cascades[0..4]
             .iter()
             .for_each(|cascade| assert_eq!(7, cascade.len()));
-        tableau.cascades[4..8]
+        game.tableau().cascades[4..8]
             .iter()
             .for_each(|cascade| assert_eq!(6, cascade.len()));
 
         assert_eq!(
             52,
-            tableau
+            game.tableau()
                 .cascades
                 .iter()
                 .fold(0, |i, cascade| i + cascade.len()),
@@ -303,8 +348,8 @@ mod tests {
 
     #[test]
     fn is_not_won_fresh() {
-        let tableau = Tableau::deal(Deck::fresh());
-        assert_eq!(false, tableau.is_won());
+        let game = Game::deal(Deck::fresh());
+        assert_eq!(false, game.is_won());
     }
 
     #[test]
@@ -325,35 +370,40 @@ mod tests {
         }
 
         let deck = Deck::new(cards);
-        let tableau = Tableau::deal(deck);
+        let game = Game::deal(deck);
 
-        assert!(tableau.is_won(), "{:?}", tableau);
+        assert!(game.is_won(), "{:?}", game);
 
         // Just to be sure: we have aces on top, right?
         assert_eq!(
             Some(&Card::new(Rank::Ace, Suit::Clubs)),
-            tableau.cascades[0].cards().last(),
+            game.tableau().cascades[0].cards().last(),
         );
     }
 
     #[test]
     fn is_won_empty() {
-        assert!(Tableau::empty().is_won());
+        assert!(Game::new(Tableau::empty()).is_won());
     }
 
     #[test]
     fn action_legal_to_foundation() {
-        let mut tableau = Tableau::empty();
-        tableau.cells[0]
-            .try_push(Card::new(Rank::Ace, Suit::Clubs))
-            .unwrap();
-        tableau.cascades[0]
-            .try_push(Card::new(Rank::Two, Suit::Clubs))
-            .unwrap();
+        let mut game = {
+            let mut tableau = Tableau::empty();
+
+            tableau.cells[0]
+                .try_push(Card::new(Rank::Ace, Suit::Clubs))
+                .unwrap();
+            tableau.cascades[0]
+                .try_push(Card::new(Rank::Two, Suit::Clubs))
+                .unwrap();
+
+            Game::new(tableau)
+        };
 
         assert_eq!(
             Ok(()),
-            tableau.action(Action {
+            game.action(Action::MoveCard {
                 from: FromCoordinate::Cell(0),
                 to: ToCoordinate::Foundation(0),
                 count: None,
@@ -361,34 +411,39 @@ mod tests {
         );
         assert_eq!(
             Ok(()),
-            tableau.action(Action {
+            game.action(Action::MoveCard {
                 from: FromCoordinate::Cascade(0),
                 to: ToCoordinate::Foundation(0),
                 count: None,
             }),
         );
 
-        assert!(tableau.cells[0].is_empty());
-        assert_eq!(0, tableau.cascades[0].len());
+        assert!(game.tableau().cells[0].is_empty());
+        assert_eq!(0, game.tableau().cascades[0].len());
         assert_eq!(
             Some(&Card::new(Rank::Two, Suit::Clubs)),
-            tableau.foundations[0].peek(),
+            game.tableau().foundations[0].peek(),
         );
     }
 
     #[test]
     fn action_legal_to_cascade() {
-        let mut tableau = Tableau::empty();
-        tableau.cells[0]
-            .try_push(Card::new(Rank::King, Suit::Clubs))
-            .unwrap();
-        tableau.cascades[0]
-            .try_push(Card::new(Rank::Queen, Suit::Hearts))
-            .unwrap();
+        let mut game = {
+            let mut tableau = Tableau::empty();
+
+            tableau.cells[0]
+                .try_push(Card::new(Rank::King, Suit::Clubs))
+                .unwrap();
+            tableau.cascades[0]
+                .try_push(Card::new(Rank::Queen, Suit::Hearts))
+                .unwrap();
+
+            Game::new(tableau)
+        };
 
         assert_eq!(
             Ok(()),
-            tableau.action(Action {
+            game.action(Action::MoveCard {
                 from: FromCoordinate::Cell(0),
                 to: ToCoordinate::Cascade(1),
                 count: None,
@@ -397,31 +452,36 @@ mod tests {
 
         assert_eq!(
             Ok(()),
-            tableau.action(Action {
+            game.action(Action::MoveCard {
                 from: FromCoordinate::Cascade(0),
                 to: ToCoordinate::Cascade(1),
                 count: None,
             }),
         );
 
-        assert!(tableau.cells[0].is_empty());
-        assert_eq!(0, tableau.cascades[0].len());
-        assert_eq!(2, tableau.cascades[1].len());
+        assert!(game.tableau().cells[0].is_empty());
+        assert_eq!(0, game.tableau().cascades[0].len());
+        assert_eq!(2, game.tableau().cascades[1].len());
     }
 
     #[test]
     fn action_legal_to_cell() {
-        let mut tableau = Tableau::empty();
-        tableau.cells[0]
-            .try_push(Card::new(Rank::Ace, Suit::Hearts))
-            .unwrap();
-        tableau.cascades[0]
-            .try_push(Card::new(Rank::Ace, Suit::Spades))
-            .unwrap();
+        let mut game = {
+            let mut tableau = Tableau::empty();
+
+            tableau.cells[0]
+                .try_push(Card::new(Rank::Ace, Suit::Hearts))
+                .unwrap();
+            tableau.cascades[0]
+                .try_push(Card::new(Rank::Ace, Suit::Spades))
+                .unwrap();
+
+            Game::new(tableau)
+        };
 
         assert_eq!(
             Ok(()),
-            tableau.action(Action {
+            game.action(Action::MoveCard {
                 from: FromCoordinate::Cell(0),
                 to: ToCoordinate::Cell(1),
                 count: None,
@@ -430,39 +490,44 @@ mod tests {
 
         assert_eq!(
             Ok(()),
-            tableau.action(Action {
+            game.action(Action::MoveCard {
                 from: FromCoordinate::Cascade(0),
                 to: ToCoordinate::Cell(2),
                 count: None,
             }),
         );
 
-        assert!(tableau.cells[0].is_empty());
-        assert_eq!(0, tableau.cascades[0].len());
+        assert!(game.tableau().cells[0].is_empty());
+        assert_eq!(0, game.tableau().cascades[0].len());
         assert_eq!(
             Some(&Card::new(Rank::Ace, Suit::Hearts)),
-            tableau.cells[1].peek()
+            game.tableau().cells[1].peek(),
         );
         assert_eq!(
             Some(&Card::new(Rank::Ace, Suit::Spades)),
-            tableau.cells[2].peek()
+            game.tableau().cells[2].peek()
         );
     }
 
     #[test]
     fn action_illegal() {
-        let mut tableau = Tableau::empty();
-        tableau.cascades[0].push(Card::new(Rank::King, Suit::Hearts));
-        tableau.cells[0]
-            .try_push(Card::new(Rank::Queen, Suit::Hearts))
-            .unwrap();
-        tableau.cells[1]
-            .try_push(Card::new(Rank::Jack, Suit::Hearts))
-            .unwrap();
+        let mut game = {
+            let mut tableau = Tableau::empty();
+
+            tableau.cascades[0].push(Card::new(Rank::King, Suit::Hearts));
+            tableau.cells[0]
+                .try_push(Card::new(Rank::Queen, Suit::Hearts))
+                .unwrap();
+            tableau.cells[1]
+                .try_push(Card::new(Rank::Jack, Suit::Hearts))
+                .unwrap();
+
+            Game::new(tableau)
+        };
 
         assert_eq!(
             Err("That card cannot go on that cascade."),
-            tableau.action(Action {
+            game.action(Action::MoveCard {
                 from: FromCoordinate::Cell(0),
                 to: ToCoordinate::Cascade(0),
                 count: None,
@@ -471,7 +536,7 @@ mod tests {
 
         assert_eq!(
             Err("A card is already present on that cell."),
-            tableau.action(Action {
+            game.action(Action::MoveCard {
                 from: FromCoordinate::Cascade(0),
                 to: ToCoordinate::Cell(0),
                 count: None,
@@ -480,7 +545,7 @@ mod tests {
 
         assert_eq!(
             Err("That card is not valid on that foundation."),
-            tableau.action(Action {
+            game.action(Action::MoveCard {
                 from: FromCoordinate::Cell(1),
                 to: ToCoordinate::Foundation(0),
                 count: None,
@@ -489,26 +554,26 @@ mod tests {
 
         assert_eq!(
             Some(&Card::new(Rank::King, Suit::Hearts)),
-            tableau.cascades[0].cards().last(),
+            game.tableau().cascades[0].cards().last(),
         );
 
         assert_eq!(
             Some(&Card::new(Rank::Queen, Suit::Hearts)),
-            tableau.cells[0].peek()
+            game.tableau().cells[0].peek()
         );
         assert_eq!(
             Some(&Card::new(Rank::Jack, Suit::Hearts)),
-            tableau.cells[1].peek()
+            game.tableau().cells[1].peek()
         );
     }
 
     #[test]
     fn action_illegal_empty() {
-        let mut tableau = Tableau::empty();
+        let mut game = Game::new(Tableau::empty());
 
         assert_eq!(
             Err("That space is empty."),
-            tableau.action(Action {
+            game.action(Action::MoveCard {
                 from: FromCoordinate::Cell(0),
                 to: ToCoordinate::Cell(1),
                 count: None,
@@ -517,7 +582,7 @@ mod tests {
 
         assert_eq!(
             Err("That space is empty."),
-            tableau.action(Action {
+            game.action(Action::MoveCard {
                 from: FromCoordinate::Cascade(0),
                 to: ToCoordinate::Cell(2),
                 count: None,

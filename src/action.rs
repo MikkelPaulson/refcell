@@ -2,16 +2,23 @@ use core::num::NonZeroU8;
 use std::str;
 
 #[derive(Debug, PartialEq)]
-pub struct Action {
-    pub from: FromCoordinate,
-    pub to: ToCoordinate,
-    pub count: Option<NonZeroU8>,
+pub enum Action {
+    Undo,
+    MoveCard {
+        from: FromCoordinate,
+        to: ToCoordinate,
+        count: Option<NonZeroU8>,
+    },
 }
 
 impl str::FromStr for Action {
     type Err = &'static str;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
+        if ["u", "U"].contains(&input.trim()) {
+            return Ok(Action::Undo);
+        }
+
         let (input_count, input_coords) =
             if let Some((input_count, input_coords)) = input.trim().split_once('+') {
                 (Some(input_count), input_coords)
@@ -36,7 +43,7 @@ impl str::FromStr for Action {
             if from == to {
                 Err("The source and destination are the same.")
             } else {
-                Ok(Action { from, to, count })
+                Ok(Action::MoveCard { from, to, count })
             }
         } else {
             Err("Invalid input.")
@@ -50,8 +57,11 @@ mod test_action {
 
     #[test]
     fn valid() {
+        assert_eq!(Ok(Action::Undo), "u\n".parse::<Action>());
+        assert_eq!(Ok(Action::Undo), "U\n".parse::<Action>());
+
         assert_eq!(
-            Ok(Action {
+            Ok(Action::MoveCard {
                 from: FromCoordinate::Cascade(0),
                 to: ToCoordinate::Cell(0),
                 count: None,
@@ -60,7 +70,7 @@ mod test_action {
         );
 
         assert_eq!(
-            Ok(Action {
+            Ok(Action::MoveCard {
                 from: FromCoordinate::Cascade(6),
                 to: ToCoordinate::Cascade(7),
                 count: Some(255.try_into().unwrap()),
@@ -69,7 +79,7 @@ mod test_action {
         );
 
         assert_eq!(
-            Ok(Action {
+            Ok(Action::MoveCard {
                 from: FromCoordinate::Cascade(6),
                 to: ToCoordinate::Cascade(7),
                 count: Some(15.try_into().unwrap()),
@@ -91,13 +101,13 @@ mod test_action {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FromCoordinate {
     Cascade(u8),
     Cell(u8),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ToCoordinate {
     Cascade(u8),
     Cell(u8),
